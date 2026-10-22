@@ -1,7 +1,9 @@
 .git/
 node_modules/
 dist/
-scripts/
+public/
 tests/
 config.example.js
 *.log
+.env*
+!.env.example

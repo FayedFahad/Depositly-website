@@ -2,17 +2,20 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-// A dependency-free ZIP writer. Only public site files enter the archive.
+// A dependency-free ZIP writer. Explicit deployment inputs exclude local secrets.
 const root = fileURLToPath(new URL('../', import.meta.url));
-const files = ['index.html', 'config.js', 'vercel.json', 'README.md'];
+const files = ['index.html', 'config.js', 'vercel.json', 'README.md', 'package.json', '.env.example', '.gitignore', '.vercelignore'];
 async function collect(directory) {
   for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
+    // Symlinks, actual environment files, temporary files and dotfiles are excluded.
+    if (entry.name.startsWith('.') || /(?:\.log|\.tmp|\.bak|~)$/.test(entry.name)) continue;
     const name = `${directory}/${entry.name}`;
     if (entry.isDirectory()) await collect(name);
-    else if (entry.isFile()) files.push(name);
+    else if (entry.isFile() && (!['api', 'server'].includes(directory.split('/')[0]) || /\.(?:mjs|js)$/.test(entry.name))) files.push(name);
   }
 }
-for (const directory of ['assets', 'privacy', 'terms']) await collect(directory);
+for (const directory of ['assets', 'privacy', 'terms', 'api', 'server']) await collect(directory);
+for (const file of ['build.mjs', 'serve.mjs', 'package.mjs', 'extract-bank-assets.mjs']) files.push(`scripts/${file}`);
 
 function crc32(buffer) {
   let crc = 0xffffffff;
@@ -64,4 +67,4 @@ end.writeUInt32LE(offset, 16);
 await mkdir(path.join(root, 'dist'), { recursive: true });
 const output = path.join(root, 'dist', 'depositly-website-vercel.zip');
 await writeFile(output, Buffer.concat([...entries, directory, end]));
-console.log(`Packaged ${files.length} public files: ${output}`);
+console.log(`Packaged ${files.length} Vercel project files (no local secrets): ${output}`);

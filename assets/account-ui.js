@@ -31,5 +31,5 @@ export function accountAvatar(user, {size = 34} = {}) {
 
 /** Render only when the cloud adapter reports connected === true. */
 export function accountButtonContent(user, {busy = false} = {}) {
-  return `${accountAvatar(user)}<span class="account-info"><span class="account-name">${escapeHTML(accountDisplayName(user))}</span><span class="account-connected"><i aria-hidden="true"></i>Google connected${busy ? ' · Updating…' : ''}</span></span>`;
+  return `${accountAvatar(user)}<span class="account-info"><span class="account-name">${escapeHTML(accountDisplayName(user))}</span><span class="account-connected"><i aria-hidden="true"></i>Signed in${busy ? ' · Updating…' : ''}</span></span>`;
 }

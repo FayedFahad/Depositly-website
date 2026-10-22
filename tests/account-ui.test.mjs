@@ -7,13 +7,13 @@ test('the connected account chip shows the full Google name, photo and explicit 
   const markup = accountButtonContent(user);
   assert.equal(accountDisplayName(user), 'Farah Rahman');
   assert.match(markup, /class="account-name">Farah Rahman<\/span>/);
-  assert.match(markup, /Google connected/);
+  assert.match(markup, /Signed in/);
   assert.match(markup, /src="https:\/\/lh3\.googleusercontent\.com\/profile\/photo\?s=96"/);
   assert.match(markup, /alt=""/);
   assert.match(markup, /referrerpolicy="no-referrer"/);
   assert.match(markup, /data-account-photo/);
   assert.doesNotMatch(markup, /onerror=/);
-  assert.match(accountButtonContent(user, {busy: true}), /Google connected · Updating…/);
+  assert.match(accountButtonContent(user, {busy: true}), /Signed in · Updating…/);
 });
 
 test('missing photos retain initials with full-name and email fallbacks', () => {
