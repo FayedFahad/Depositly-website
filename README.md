@@ -98,10 +98,7 @@ The Android parity test runs when the sibling `Depositly/app/assets/index.html` 
 
 | File | Purpose |
 | --- | --- |
-| `index.html`, `assets/app.js` | Application shell and views |
-| `assets/web.css` | Shared Greenstone-style design system (moss/forest tokens, Poppins + Open Sans, glass cards, hero backdrop, marquee, dark theme, mobile dock, reduced motion) for the app and the policy pages |
-| `assets/motion.js` | Dependency-free scroll progress, blur-up reveals, number count-ups, card tilt, hero parallax, cursor glow and back-to-top; honors `prefers-reduced-motion` |
-| `assets/fonts/` | Self-hosted Poppins and Open Sans (latin, woff2) with their OFL licences |
+| `index.html`, `assets/app.js`, `assets/web.css` | Application and responsive theme |
 | `assets/account-ui.js` | Connected Google profile and photo fallback |
 | `assets/bank-ui.js`, `assets/bank-logos.js`, `assets/banks/` | Bank picker, original logos, and crop metadata |
 | `assets/data-engine.js` | Android-compatible calculations and backups |
@@ -115,10 +112,6 @@ The Android parity test runs when the sibling `Depositly/app/assets/index.html` 
 | `scripts/serve.mjs` | Local frontend and API preview |
 | `scripts/package.mjs` | Package deployable sources without local secrets |
 | `scripts/extract-bank-assets.mjs` | Reproduce bank images from Android source |
-| `privacy/`, `terms/` | Public policy pages (styled by `assets/web.css`) |
+| `privacy/`, `terms/` | Public policy pages |
 
 Publisher: Greenstone Solutions LLC. Support: [air.expx2@gmail.com](mailto:air.expx2@gmail.com).
-
-## Greenstone theme trial
-
-The previous website UI is preserved at Git commit `aad4abc`. A source snapshot is also saved locally as `dist/depositly-before-greenstone-theme-aad4abc.zip`. The redesigned theme is applied in one separate commit so it can be reverted with Git revert while keeping subsequent changes. Account cookies, private Vercel environment settings, local workspace keys, the financial engine, and Drive backup formats are unchanged by this theme trial.
