@@ -49,3 +49,5 @@ body.dark{--bg:#14251f;--surface:#1d3028;--ink:#e4ecde;--muted:#abb9a9;--line:#3
 body.dark .asset-icon.bank-mark{background:#fff;color:#284f41;border-color:#53645a}
 
 .workspace-foot{flex-wrap:wrap}.workspace-foot .builder-credit{display:flex;align-items:center;justify-content:flex-end;gap:9px;width:100%;padding-top:14px;margin-top:8px;border-top:1px solid var(--line);font-size:11px;line-height:1.5}.builder-credit strong{font-weight:600;color:var(--ink)}.builder-credit img{display:block;width:28px;height:28px;object-fit:contain;border-radius:7px;flex-shrink:0}@media(max-width:640px){.workspace-foot .builder-credit{justify-content:flex-start}}
+
+.workspace-foot .builder-credit a{margin-left:0}
