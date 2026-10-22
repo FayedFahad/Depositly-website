@@ -1,0 +1,7 @@
+.git/
+node_modules/
+dist/
+scripts/
+tests/
+config.example.js
+*.log

@@ -1,29 +1,83 @@
-# Depositly website
+# Depositly web
 
-Simple static website for Vercel. No package installation or build command is needed.
+A responsive web companion for Depositly Android: deposits, National Savings Certificates, interest and maturity schedules, received payments, ownership, and preferences. It uses the Android backup format and the same private Google Drive application folder. The website runs entirely in the browser and is ready for Vercel; no backend, database, client secret, or dependency installation is required.
 
-## Deploy
-1. Extract this ZIP.
-2. Open https://vercel.com/drop and sign in.
-3. Drag the extracted depositly-website folder onto the page.
-4. Choose your project name and deploy. For a framework setting, choose Other; no build command is needed. The folder contains index.html at its root.
-5. Open the production homepage, /privacy/ and /terms/ while signed out to confirm public access.
+## Preview and check
 
-You can instead upload these files to a GitHub repository and import it in Vercel. Keep index.html at the repository root. Choose Other, leave Build Command empty and use the root as the output directory.
+Requires Node.js 20 or newer for the development helpers. The deployed website does not require Node.js.
 
-## Google verification
-For public branding verification, use a custom domain you own and can verify in Google Search Console. A deployment subdomain under vercel.app does not give you ownership of vercel.app.
-Add your custom domain in Vercel project Settings > Domains and follow Vercel's DNS instructions.
-Then enter:
-- Homepage: https://YOUR-DOMAIN/
-- Privacy policy: https://YOUR-DOMAIN/privacy/
-- Terms: https://YOUR-DOMAIN/terms/
-- Authorized domain: YOUR-DOMAIN (domain only)
-The YOUR-DOMAIN values are instructions, not live URLs.
-Verify domain ownership, save Branding, then follow Google's Audience/Verification Center prompts. Creating this site does not itself approve Google verification.
+```powershell
+npm run dev
+# Open http://localhost:4173
 
-## Content
-Publisher: Greenstone Solutions LLC, as named in the supplied app.
-Support: air.expx2@gmail.com, as shown in the supplied Cloud Branding screenshot.
-No analytics, sign-in forms, tracking scripts, external fonts or investment data collection are added to this website.
-The supplied Depositly 1.0.5 source has local storage and manual exports but no Google Drive integration. Privacy text therefore describes Drive as optional in supported versions. Before submitting a newer app for verification, confirm that the privacy policy matches the actual release's permissions, data access, deletion controls and backup retention. Update it when behavior changes.
+npm test
+npm run package
+```
+
+`npm run package` creates `dist/depositly-website-vercel.zip` containing the public site and setup instructions. Extract the archive and deploy the inner `depositly-website` folder. It excludes tests, scripts, Git history, local logs, and dependencies.
+
+The Android source parity check runs when the sibling `Depositly/app/assets/index.html` is available; otherwise that one check is skipped. Set `DEPOSITLY_ANDROID_SOURCE` to the Android HTML file's absolute path to run it from another checkout. The remaining calculation, backup, cloud adapter, and browser-storage checks run without the Android repository.
+
+## Enable Google sign-in
+
+The supplied `config.js` contains the existing public **Web application** OAuth client ID documented in the Android repository. A client ID is public configuration; it is safe in browser code. Never put its client secret, access tokens, or downloaded credential JSON files in this project.
+
+Use the same Google Cloud project as the Android app: **depositly**, project number **688859064258**. Using another project gives the website a different application-data folder, even if you use the same Google account.
+
+1. Open [Google Auth Platform → Clients](https://console.cloud.google.com/auth/clients?project=depositly) and select the Web application client ending in `h97snetju0b3rts3jltgd210dobn75f1.apps.googleusercontent.com`. The Android client cannot be used by the website.
+2. Add these **Authorized JavaScript origins** for local development: `http://localhost` and `http://localhost:4173`. If you change the port, add the new complete origin too. Open the site using `localhost`, rather than a file URL or an unregistered IP address.
+3. After creating your Vercel deployment, add its exact HTTPS origin, for example `https://your-project.vercel.app`. Add your custom-domain origin separately when you use one. Origins contain the scheme, hostname, and optional port, with no path or trailing slash. Each preview deployment needs an authorized origin; prefer a stable production domain.
+4. [Enable the Google Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com?project=depositly). Under [Data Access](https://console.cloud.google.com/auth/scopes?project=depositly), include `openid`, profile, email, and `https://www.googleapis.com/auth/drive.appdata`.
+5. If the OAuth app remains in Testing, add your Google account under [Audience → Test users](https://console.cloud.google.com/auth/audience?project=depositly). Complete Google's consent-screen and production requirements before allowing other accounts. Testing authorizations involving Drive can expire after seven days.
+6. Confirm the public homepage, privacy, and terms URLs in [Branding](https://console.cloud.google.com/auth/branding?project=depositly). Use a domain you own for domain verification. Hosting a page does not itself complete Google verification.
+
+The popup token flow does not use a server callback or require a client secret. If you replace the client, update `googleClientId` in `config.js`; `config.example.js` shows the format. Load `config.js` before the application module. Google Cloud settings have not been changed by this build.
+
+Google controls account selection and permission consent. Tokens are kept in memory; reload or token expiry can require reconnecting. The website requests only basic identity information and access to Depositly's hidden application-data folder. It does not request access to all files in Drive.
+
+## Bring your phone records to the website
+
+1. In the Android app, open **Settings → Account & cloud backup**, connect Google, and choose **Back up now**. Wait for **Backup saved to Google Drive**.
+2. Open the website, connect the same Google account, and load the latest phone backup. When local records exist, review the restore or merge choice before applying it.
+3. After a change on the phone, finish its backup, then refresh/check for new backups on the website. The website can check for newer snapshots while open and lets you review them before replacing local edits.
+4. After editing on the website, explicitly save a backup to Google Drive. On a phone that already has data, use its restore or merge flow to import that backup. Download a JSON copy before replacing records on either device.
+
+The current Android integration uploads complete snapshots; it does not continuously receive changes from another device. This website shares those snapshots and detects newer ones, but it cannot make a closed phone app update instantly. Keep one device's edits backed up before continuing on the other. Publishing from the website checks for a newer cloud backup and stops for a review when a conflict is detected. Google Drive does not offer an atomic compare-and-create transaction for this workflow, so simultaneous saves on two devices should still be avoided.
+
+A full JSON file backup includes Self and Others investments, payment receipts and receipt snapshots, currency, number formatting, theme, and default deposit view. Downloads use Android's investment export format so they can be imported through the phone's regular data manager. Google Drive snapshots additionally retain Android's native reminder enabled/time preferences. Financial calculations follow Android's 360-day interest year, calendar-month payouts, tax deductions, and renewal projections. The website preserves and edits those reminder preferences for the next Drive restore; it does not deliver phone or browser notifications. Android notification delivery remains controlled by the phone and its permissions.
+
+You can also import a full JSON backup without signing in. JSON is the complete backup format; CSV contains investment records and does not preserve receipt history. Local browser records stay in that browser profile and can be lost when site storage is cleared. Demo records are illustrative and are kept separate from real records.
+
+## Deploy on Vercel
+
+Import this repository into Vercel, or use the extracted archive as your static project. Set:
+
+| Setting | Value |
+| --- | --- |
+| Framework Preset | Other |
+| Root Directory | The folder containing `index.html` and `vercel.json` |
+| Build Command | Leave empty |
+| Output Directory | `.` (project root) |
+| Install Command | Leave empty, or `npm install` (there are no dependencies) |
+| Environment variables | None |
+
+Do not select `dist` as the output directory: that directory holds the downloadable ZIP, not the website. This repository is located directly at `E:\Github\depositly-website`. Keep the Vercel Root Directory at the repository root; no nested project directory is needed.
+
+`vercel.json` sets these static build values automatically. `.vercelignore` excludes development scripts, tests, and generated archives from repository deployments. After deployment, register the exact production origin in Google Cloud as described above. Check `/`, `/privacy/`, and `/terms/`, then perform a real round trip: back up one phone record and receipt, load it on the website, publish a small web change, and restore it on the phone. Real Google authorization and Android restoration require your account and device and are not proven by local automated tests.
+
+## Project files
+
+| File | Purpose |
+| --- | --- |
+| `index.html` | Website shell |
+| `assets/app.js`, `assets/web.css` | Application and responsive theme |
+| `assets/data-engine.js` | Android-compatible calculations and backups |
+| `assets/cloud-sync.js` | Google Identity Services and Drive snapshot adapter |
+| `config.js` | Public Web OAuth client ID |
+| `privacy/`, `terms/` | Public policy pages |
+| `vercel.json` | Static hosting and popup-compatible security headers |
+| `tests/` | Financial parity and cloud adapter checks |
+
+Publisher: Greenstone Solutions LLC. Support: [air.expx2@gmail.com](mailto:air.expx2@gmail.com).
+
+References: [Google Identity token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Web client setup](https://developers.google.com/identity/oauth2/web/guides/get-google-api-clientid), [Drive application-data folders](https://developers.google.com/workspace/drive/api/guides/appdata), [OAuth authorization expiration](https://developers.google.com/identity/protocols/oauth2#expiration), [Vercel static configuration](https://vercel.com/docs/project-configuration/vercel-json), [Vercel buildless projects](https://vercel.com/docs/builds/configure-a-build#skip-build-step).

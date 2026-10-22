@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "browser-qa",
+      "type": "FDR",
+      "name": "Phone import check",
+      "principal": 25000000,
+      "rate": 10,
+      "tds": 10,
+      "cycle": 1,
+      "cycleUnit": "months",
+      "start": "2026-01-31",
+      "first": "2026-02-28",
+      "maturity": "2027-01-31",
+      "tenureCount": 12,
+      "tenureUnit": "months",
+      "ownership": "self",
+      "ownerName": "Test account",
+      "reference": "000042",
+      "bankId": "brac-bank-plc",
+      "notes": "Disposable browser verification fixture"
+    }
+  ],
+  "paid": {
+    "browser-qa:2026-02-28": {
+      "amount": 185000,
+      "date": "2026-02-28",
+      "notes": "Receipt from phone",
+      "snapshot": {
+        "assetId": "browser-qa",
+        "name": "Phone import check",
+        "type": "FDR",
+        "scheduledDate": "2026-02-28",
+        "kind": "Interest",
+        "gross": 208333,
+        "tax": 20833,
+        "expected": 187500,
+        "principal": 0
+      }
+    }
+  },
+  "dark": false,
+  "currency": "BDT",
+  "numberFormat": "international",
+  "defaultDepositView": "grid",
+  "format": "bd.fdr.vault.entries",
+  "formatVersion": 1,
+  "minReaderVersion": 3,
+  "exportedAt": "2026-10-22T09:44:28.907Z",
+  "scope": "all"
+}
