@@ -18,7 +18,7 @@ async function until(predicate, message) {
 }
 
 /** Runs the actual browser entry point with a minimal DOM and controlled API. */
-async function boot(context) {
+async function boot(context, options = {}) {
   const originals = new Map(), nodes = new Map(), documentListeners = new Map(), windowListeners = new Map(), renders = [];
   function replace(name, value) { originals.set(name, Object.getOwnPropertyDescriptor(globalThis, name)); Object.defineProperty(globalThis, name, {configurable: true, writable: true, value}); }
   const register = (map, type, callback) => { if (!map.has(type)) map.set(type, []); map.get(type).push(callback); };
@@ -35,7 +35,7 @@ async function boot(context) {
   };
   const values = new Map([[accountWorkspaceKey(alice), JSON.stringify(workspace(alice, 'ALICE_PRIVATE_DEPOSIT'))], [accountWorkspaceKey(bob), JSON.stringify(workspace(bob, 'BOB_PRIVATE_DEPOSIT'))]]);
   const storage = {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key)};
-  const server = {user: alice, failSession: false, pendingSession: null, sessionCalls: 0};
+  const server = {user: alice, failSession: !!options.failSession, pendingSession: options.pendingSession || null, sessionCalls: 0};
   const session = user => user ? {authenticated: true, configured: true, user, csrfToken: 'private-test-csrf-token', expiresAt: Date.now() + 100000} : {authenticated: false, configured: true};
   replace('document', {hidden: false, body: {classList: classList()}, getElementById: node, querySelector: node,
     addEventListener: (type, callback) => register(documentListeners, type, callback)});
@@ -61,7 +61,9 @@ async function boot(context) {
   });
   context.after(() => { for (const [name, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; } });
   await import(`../assets/app.js?isolation-test=${Math.random()}`);
+  if(options.beforeReady)await options.beforeReady({server, node, renders, session, retry: async()=>{for(const callback of documentListeners.get('click')||[])await callback({target:{dataset:{action:'retry-account'},tagName:'BUTTON',disabled:false,closest(){return this;}},preventDefault(){}});}});
   await until(() => node('app').innerHTML.includes('ALICE_PRIVATE_DEPOSIT') && node('app').innerHTML.includes('aria-busy="false"'), 'initial verified Alice workspace should open');
+  await until(()=>node('connect-top').disabled===false,'initial account backup check should finish');
   const dispatchWindow = (type, event = {}) => { for (const callback of windowListeners.get(type) || []) callback(event); };
   const dispatchDocument = async (type, event) => { for (const callback of documentListeners.get(type) || []) await callback(event); };
   const click = action => dispatchDocument('click', {target: {dataset: {action}, tagName: 'BUTTON', disabled: false, closest() { return this; }}, preventDefault() {}});
@@ -122,4 +124,26 @@ test('actual app drops a delayed file import when its account scope changes', as
   await pending;
   assert.equal(app.node('modal').open, false, 'old account file must not reopen an import preview');
   assert.doesNotMatch(app.node('app').innerHTML, /ALICE_PRIVATE_DEPOSIT/);
+});
+
+test('startup never renders a demo or signed-out account while the saved session is pending', async context => {
+ const held=deferred();
+ const app=await boot(context,{pendingSession:held,beforeReady:async({node,renders,session})=>{
+  assert.match(node('app').innerHTML,/Opening your workspace/);
+  assert.doesNotMatch(renders.join(' '),/Demo workspace|These are sample investments|Everyday growth|ALICE_PRIVATE_DEPOSIT|Sign in with Google/);
+  held.resolve(response(session(alice)));
+ }});
+ assert.match(app.node('app').innerHTML,/ALICE_PRIVATE_DEPOSIT/);
+ assert.doesNotMatch(app.renders.join(' '),/Demo workspace|These are sample investments|Everyday growth/);
+});
+
+test('a failed startup session check stays on the recovery screen until a verified retry', async context => {
+ const app=await boot(context,{failSession:true,beforeReady:async({server,node,retry})=>{
+  await until(()=>node('app').innerHTML.includes('could not be reached'),'startup should offer retry');
+  assert.doesNotMatch(node('app').innerHTML,/Demo workspace|These are sample investments|ALICE_PRIVATE_DEPOSIT/);
+  assert.match(node('app').innerHTML,/data-action="retry-account"/);
+  server.failSession=false;await retry();
+ }});
+ assert.match(app.node('app').innerHTML,/ALICE_PRIVATE_DEPOSIT/);
+ assert.doesNotMatch(app.renders.join(' '),/Demo workspace|These are sample investments/);
 });
