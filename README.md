@@ -35,7 +35,17 @@ If no Google window appears, open the site directly in a full browser, rather th
 
 The popup token flow does not use a server callback or require a client secret. If you replace the client, update `googleClientId` in `config.js`; `config.example.js` shows the format. Load `config.js` before the application module. Google Cloud settings have not been changed by this build.
 
-Google controls account selection and permission consent. Tokens are kept in memory; reload or token expiry can require reconnecting. The website requests only basic identity information and access to Depositly's hidden application-data folder. It does not request access to all files in Drive.
+Google controls account selection and permission consent. While connected, the header shows your full Google name, profile photo, and connection status; the sidebar and account page also show your email. Missing or unavailable photos fall back to initials. These profile details and tokens remain in page memory; reload or token expiry can require reconnecting, and the interface does not continue claiming an expired session is connected. The website requests only basic identity information and access to Depositly's hidden application-data folder. It does not request access to all files in Drive.
+
+## Google sign-in works in Edge but not Chrome
+
+If the same website URL connects successfully in Edge, that is evidence that its client ID and authorized origin work. A Chrome `popup_failed_to_open` error means Google could not open the sign-in window; it does not by itself identify an OAuth origin error. A `popup_closed` error means the window closed before Google returned a response. Google documents these as [popup errors handled separately from OAuth responses](https://developers.google.com/identity/oauth2/web/guides/error).
+
+1. Try the same URL in Chrome's **Profile → Open Guest profile** and click **Connect Google**. This is a diagnostic session separate from your usual browser profile; no existing Depositly browser records are removed. Close it after testing, because [Guest site data is deleted when the Guest session ends](https://support.google.com/chrome/answer/6130773?hl=en).
+2. In your regular Chrome profile, click **Connect Google** and look for the blocked-popup icon in the address bar. If it appears, allow pop-ups and redirects for the Depositly site, then retry. You can also open **Settings → Privacy and security → Site settings → Pop-ups and redirects** and add the exact Depositly origin to the allowed list. Keep this exception limited to Depositly. See [Chrome's site-specific popup controls](https://support.google.com/chrome/answer/95472?hl=en).
+3. If Guest works but the regular profile still fails after the site permission is allowed, a profile setting or extension may be involved. Check popup/privacy extensions for a Depositly-specific exception or temporarily test the suspected extension on this site. Guest success alone does not identify which extension or setting caused the failure.
+
+Keep the current Google Identity Services dialog flow. Google recommends it over the older manual client-side OAuth approach, and its [token model supports dialog UX only](https://developers.google.com/identity/oauth2/web/guides/use-token-model). A new token-in-URL redirect fallback is not part of this website's sign-in flow.
 
 ## Bring your phone records to the website
 
@@ -47,6 +57,8 @@ Google controls account selection and permission consent. Tokens are kept in mem
 The current Android integration uploads complete snapshots; it does not continuously receive changes from another device. This website shares those snapshots and detects newer ones, but it cannot make a closed phone app update instantly. Keep one device's edits backed up before continuing on the other. Publishing from the website checks for a newer cloud backup and stops for a review when a conflict is detected. Google Drive does not offer an atomic compare-and-create transaction for this workflow, so simultaneous saves on two devices should still be avoided.
 
 A full JSON file backup includes Self and Others investments, payment receipts and receipt snapshots, currency, number formatting, theme, and default deposit view. Downloads use Android's investment export format so they can be imported through the phone's regular data manager. Google Drive snapshots additionally retain Android's native reminder enabled/time preferences. Financial calculations follow Android's 360-day interest year, calendar-month payouts, tax deductions, and renewal projections. The website preserves and edits those reminder preferences for the next Drive restore; it does not deliver phone or browser notifications. Android notification delivery remains controlled by the phone and its permissions.
+
+Institution logos come from the Android app: 68 extracted PNG assets and metadata for all 69 catalog entries. Their crop metadata preserves the original bank symbols in overview rows, deposit cards and tables, deposit details, and the form's bank picker. Jubilee Bank and unknown institutions use a generic fallback. Run `node scripts/extract-bank-assets.mjs` with the Android source available to reproduce the extracted assets. Desktop and mobile profile-photo display and initials fallback were checked with a labeled test profile; that visual check is separate from a real Google account authorization and phone backup round trip.
 
 You can also import a full JSON backup without signing in. JSON is the complete backup format; CSV contains investment records and does not preserve receipt history. Local browser records stay in that browser profile and can be lost when site storage is cleared. Demo records are illustrative and are kept separate from real records.
 
@@ -73,12 +85,16 @@ Do not select `dist` as the output directory: that directory holds the downloada
 | --- | --- |
 | `index.html` | Website shell |
 | `assets/app.js`, `assets/web.css` | Application and responsive theme |
+| `assets/account-ui.js` | Connected Google profile display and photo fallback |
+| `assets/bank-ui.js`, `assets/bank-logos.js` | Bank picker, logo display, and crop metadata |
+| `assets/banks/` | 68 bank logo PNGs extracted from the Android app |
 | `assets/data-engine.js` | Android-compatible calculations and backups |
 | `assets/cloud-sync.js` | Google Identity Services and Drive snapshot adapter |
 | `config.js` | Public Web OAuth client ID |
 | `privacy/`, `terms/` | Public policy pages |
 | `vercel.json` | Static hosting and popup-compatible security headers |
 | `tests/` | Financial parity and cloud adapter checks |
+| `scripts/extract-bank-assets.mjs` | Reproduce bank assets from Android source |
 
 Publisher: Greenstone Solutions LLC. Support: [air.expx2@gmail.com](mailto:air.expx2@gmail.com).
 

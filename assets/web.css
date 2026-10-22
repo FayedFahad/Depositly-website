@@ -15,3 +15,35 @@ body.dark{--bg:#14251f;--surface:#1d3028;--ink:#e4ecde;--muted:#abb9a9;--line:#3
 @media(max-width:420px){.metric-top{font-size:9px}.deposit-name .name{font-size:11px}}
 
 .btn{white-space:nowrap}.heading-actions{flex-shrink:0}.page-heading>div:first-child{min-width:0}@media(max-width:420px){.day small{font-size:8px}.heading-actions .btn{padding-left:9px;padding-right:9px}.calendar-header .icon-button{min-width:34px}}
+
+/* Connected Google identity: photo, full name and an explicit connection state. */
+.account-chip{display:inline-flex;align-items:center;justify-content:flex-start;gap:9px;max-width:270px;text-align:left}
+.btn.account-chip{padding:6px 12px 6px 7px;min-height:48px;border-radius:13px}
+.account-avatar{--account-avatar-size:34px;position:relative;display:inline-grid;place-items:center;flex:0 0 var(--account-avatar-size);width:var(--account-avatar-size);height:var(--account-avatar-size);border:1px solid var(--line);border-radius:50%;overflow:hidden;background:var(--soft);color:var(--green);font-size:calc(var(--account-avatar-size)*.34);font-weight:650;line-height:1}
+.account-avatar-initials{grid-area:1/1;max-width:100%;overflow:hidden;white-space:nowrap}
+.account-avatar .account-photo{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;object-fit:cover;background:var(--soft)}
+.account-avatar.photo-failed .account-photo{display:none}
+.account-info{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-width:0;text-align:left}
+.account-name{display:block;max-width:185px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-size:12px;font-weight:600;line-height:1.4}
+.account-connected{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-size:9px;font-weight:500;line-height:1.4;white-space:nowrap}
+.account-connected i{display:inline-block;flex:0 0 5px;width:5px;height:5px;border-radius:50%;background:currentColor}
+.account-details{display:flex;align-items:center;gap:13px;min-width:0}
+.account-details .account-name{max-width:100%;white-space:normal;overflow-wrap:anywhere;font-size:15px}
+.account-details .account-connected{font-size:10px}
+.account-details .account-email{display:block;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+.sidebar-footer .account-name{max-width:135px;font-size:11px}
+.sidebar-footer .account-connected{font-size:9px}
+.sidebar-footer .account-info{flex:1}
+@media(max-width:720px){.btn.account-chip{max-width:210px;padding-right:9px;gap:7px}.account-chip .account-name{max-width:140px;font-size:11px}.account-chip .account-connected{font-size:9px}}
+@media(max-width:440px){.btn.account-chip{max-width:181px}.account-chip .account-name{max-width:112px}.account-chip .account-connected{font-size:8px}}/* Original offline bank symbols, shared with the Android bank catalog. */
+.bank-logo{display:block;width:30px;height:30px;max-width:100%;max-height:100%;overflow:hidden;flex-shrink:0}
+.bank-mark{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:44px;height:44px;padding:7px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#284f41}
+.asset-icon.bank-mark{background:#fff;color:#284f41}
+.bank-mark .bank-logo,.asset-icon .bank-logo{width:100%;height:100%;stroke:none}
+.bank-mark .bank-logo--fallback,.asset-icon .bank-logo--fallback{stroke:currentColor}
+.bank-picker-preview{display:flex;align-items:center;gap:11px;min-height:58px;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+.bank-picker-preview .bank-mark{width:38px;height:38px;padding:6px;border-radius:10px}
+.bank-picker-preview>div{min-width:0;flex:1}.bank-picker-preview b{display:block;font-size:12px;line-height:1.45}.bank-picker-preview small{display:block;margin-top:3px;font-size:10px;color:var(--muted)}
+
+.detail-institution{display:flex;align-items:center;gap:12px;margin-bottom:20px}.detail-institution .asset-icon{width:47px;height:47px}.detail-institution b{font-size:13px}.detail-institution small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.sidebar-footer .user-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.notice ol{padding-left:19px;margin:10px 0}.notice li+li{margin-top:8px}
+body.dark .asset-icon.bank-mark{background:#fff;color:#284f41;border-color:#53645a}
