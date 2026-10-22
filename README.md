@@ -31,6 +31,8 @@ Use the same Google Cloud project as the Android app: **depositly**, project num
 5. If the OAuth app remains in Testing, add your Google account under [Audience → Test users](https://console.cloud.google.com/auth/audience?project=depositly). Complete Google's consent-screen and production requirements before allowing other accounts. Testing authorizations involving Drive can expire after seven days.
 6. Confirm the public homepage, privacy, and terms URLs in [Branding](https://console.cloud.google.com/auth/branding?project=depositly). Use a domain you own for domain verification. Hosting a page does not itself complete Google verification.
 
+If no Google window appears, open the site directly in a full browser, rather than an embedded preview. The website preloads Google’s sign-in library and opens the ready popup directly from your click. If the library was still loading, click **Continue with Google** once it is ready. Error dialogs distinguish a closed popup, a failed popup, and Google configuration errors; an unknown error does not necessarily mean popups are blocked.
+
 The popup token flow does not use a server callback or require a client secret. If you replace the client, update `googleClientId` in `config.js`; `config.example.js` shows the format. Load `config.js` before the application module. Google Cloud settings have not been changed by this build.
 
 Google controls account selection and permission consent. Tokens are kept in memory; reload or token expiry can require reconnecting. The website requests only basic identity information and access to Depositly's hidden application-data folder. It does not request access to all files in Drive.

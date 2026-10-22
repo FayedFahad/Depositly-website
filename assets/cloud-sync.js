@@ -99,9 +99,43 @@ export function validateCloudBackup(input, validateData = value => value) {
  * expectedFileId is the last REVIEWED backup id, or null when none exists.
  * disconnect() clears the account and token without deleting vault data or backups.
  */
-export function createCloudSync({ clientId = DEFAULT_CLIENT_ID, validateData = value => value, onStatus = () => {}, fetchImpl = globalThis.fetch?.bind(globalThis), googleProvider = loadGoogleIdentity } = {}) {
+export function createCloudSync({ clientId = DEFAULT_CLIENT_ID, validateData = value => value, onStatus = () => {}, fetchImpl = globalThis.fetch?.bind(globalThis), googleProvider = () => globalThis.google?.accounts?.oauth2 || loadGoogleIdentity() } = {}) {
   let accessToken = '', expiresAt = 0, generation = 0, busy = false;
   let user = null, latestFile = null, phase = 'disconnected', message = 'Connect Google to open your Android backup.';
+  let preparedGoogle = null, preparingGoogle = null;
+
+  // Load ahead of the click, without requesting permission or opening a window.
+  function prepare() {
+    if (preparedGoogle) return Promise.resolve(preparedGoogle);
+    if (preparingGoogle) return preparingGoogle;
+    const accept = oauth => {
+      if (typeof oauth?.initTokenClient !== 'function' || typeof oauth?.hasGrantedAllScopes !== 'function') throw new CloudError('Google sign-in did not finish loading. Please try again.', 'GOOGLE_LOAD_FAILED');
+      preparedGoogle = oauth;
+      return oauth;
+    };
+    try {
+      const supplied = googleProvider();
+      if (!supplied || typeof supplied.then !== 'function') return Promise.resolve(accept(supplied));
+      preparingGoogle = Promise.resolve(supplied).then(accept).finally(() => { preparingGoogle = null; });
+      return preparingGoogle;
+    } catch (error) { return Promise.reject(error); }
+  }
+
+  function oauthError(result) {
+    const googleErrorCode = /^[a-zA-Z0-9_-]{1,80}$/.test(result?.error || '') ? result.error : 'unknown';
+    const text = googleErrorCode === 'access_denied'
+      ? 'Google sign-in was canceled. You can try again whenever you are ready.'
+      : ['origin_mismatch', 'invalid_client', 'unauthorized_client'].includes(googleErrorCode)
+        ? 'Google rejected this website’s OAuth configuration. Check the Web client and its Authorized JavaScript origins.'
+        : 'Google could not complete sign-in. Check the account’s access and try again.';
+    return new CloudError(text, 'AUTH_FAILED', { googleErrorCode });
+  }
+
+  function popupError(error) {
+    if (error?.type === 'popup_closed') return new CloudError('The Google sign-in window closed before sign-in finished. Your local records are unchanged.', 'POPUP_CLOSED', { googleErrorType: 'popup_closed' });
+    if (error?.type === 'popup_failed_to_open') return new CloudError('This browser could not open the Google sign-in window. Try again from the button, or open Depositly directly in your browser.', 'POPUP_FAILED_TO_OPEN', { googleErrorType: 'popup_failed_to_open' });
+    return new CloudError('Google could not start its sign-in window. Open Depositly directly in Chrome, Edge, Firefox or Safari and try again.', 'GOOGLE_POPUP_UNKNOWN', { googleErrorType: 'unknown' });
+  }
 
   const getStatus = () => ({ connected: !!user && !!accessToken && Date.now() < expiresAt, busy, phase, message, user: user ? { ...user } : null, latestFile: latestFile ? { ...latestFile } : null, expiresAt: user ? expiresAt : 0 });
   function update(nextPhase, nextMessage) {
@@ -188,14 +222,26 @@ export function createCloudSync({ clientId = DEFAULT_CLIENT_ID, validateData = v
     update('connecting', 'Opening Google sign-in…');
     try {
       if (!/^[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$/.test(clientId)) throw new CloudError('Configure the Google Web client ID before signing in.', 'CONFIG_REQUIRED');
-      const oauth = await googleProvider();
+      if (!preparedGoogle) {
+        const preparation = prepare();
+        if (!preparedGoogle) {
+          await preparation;
+          ensureGeneration(current);
+          // Opening after a network wait can lose the browser's user activation.
+          // A fresh click is required instead of trying to open a delayed popup.
+          throw new CloudError('Google sign-in is ready. Click Continue with Google to open the sign-in window.', 'GOOGLE_READY');
+        }
+      }
+      const oauth = preparedGoogle;
       ensureGeneration(current);
       const response = await new Promise((resolve, reject) => {
         const client = oauth.initTokenClient({
           client_id: clientId, scope: SCOPES, include_granted_scopes: true,
-          callback: result => result.error ? reject(new CloudError(result.error === 'access_denied' ? 'Google sign-in was canceled. You can try again whenever you are ready.' : 'Google sign-in failed. Check the authorized website origin in Google Cloud.', 'AUTH_FAILED')) : resolve(result),
-          error_callback: error => reject(new CloudError(error.type === 'popup_closed' ? 'Google sign-in was closed. Your local records are unchanged.' : 'Allow popups for this website, then click Connect Google again.', 'POPUP_FAILED'))
+          callback: result => result?.error ? reject(oauthError(result)) : resolve(result),
+          error_callback: error => reject(popupError(error))
         });
+        // Keep this call synchronous with the original button click. No await
+        // or asynchronous SDK loading may be inserted before this ready path.
         client.requestAccessToken({ prompt: selectAccount ? 'select_account' : '' });
       });
       ensureGeneration(current);
@@ -215,7 +261,7 @@ export function createCloudSync({ clientId = DEFAULT_CLIENT_ID, validateData = v
         expiresAt = 0;
         user = null;
         latestFile = null;
-        update('error', error.message);
+        update(error.code === 'GOOGLE_READY' ? 'ready' : 'error', error.message);
       }
       throw error;
     } finally { finish(current); }
@@ -274,5 +320,5 @@ export function createCloudSync({ clientId = DEFAULT_CLIENT_ID, validateData = v
     busy = false;
     update('disconnected', 'Signed out. Your browser records and Google Drive backups are kept.');
   }
-  return Object.freeze({ connect, readLatest, upload, disconnect, getStatus });
+  return Object.freeze({ prepare, connect, readLatest, upload, disconnect, getStatus });
 }

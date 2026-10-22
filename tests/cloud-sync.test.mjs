@@ -13,7 +13,7 @@ function harness(responses, { scopes = true } = {}) {
     hasGrantedAllScopes: () => scopes
   };
   const cloud = createCloudSync({
-    googleProvider: async () => fakeGoogle,
+    googleProvider: () => fakeGoogle,
     validateData: value => ({ ...value, validated: true }),
     fetchImpl: async (url, options) => {
       requests.push({ url, options });
