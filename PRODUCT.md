@@ -1,0 +1,43 @@
+# Depositly
+
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+web
+
+## Users
+
+People who track fixed deposits and National Savings Certificates, including existing Depositly Android users who open their records on a larger screen.
+
+## Product Purpose
+
+Keep the deposit tracker as the homepage. Help users inspect their principal, check payment schedules, record receipts, and manage their deposits. The user confirmed this scope on 24 October 2026.
+
+## Operating Context
+
+Users enter records in the browser or transfer Android-compatible backups through JSON files and optional Google Drive snapshots. Google sign-in opens an account-specific workspace. The app separates Self deposits from Others deposits; only Self deposits contribute to financial totals, while the calendar includes both.
+
+## Capabilities and Constraints
+
+- Preserve deposits, receipts, calendar, exports, import review, account isolation, and preferences.
+- Preserve the Android calculations, including the 360-day interest year and TDS.
+- Preserve the Vercel Node API and same-origin Google authentication. Do not substitute static-only hosting.
+- Drive backups exchange complete snapshots; do not describe them as continuous live synchronization.
+- Rename Overview to Dashboard. Keep existing overview links working.
+- Keep the existing vanilla JavaScript, HTML, and CSS architecture.
+
+## Brand Commitments
+
+Preserve the Depositly name and supplied logo, Greenstone Solutions LLC publisher credit, support contact, and legal facts. Replace the existing visual design across the site. Use clear, specific interface copy.
+
+## Evidence on Hand
+
+README.md documents the product and hosting. assets/data-engine.js contains the financial rules. assets/logo.png and assets/banks/ contain the original artwork. The app supplies fictional demo records, which must remain identified as demo data. No customer quotes or adoption statistics have been supplied.
+
+## Product Principles
+
+- Put current balances and upcoming payments within reach.
+- Keep account identity and backup state explicit.
+- Preserve data when users review imports or switch accounts.
+- Keep controls usable on phones and with a keyboard.

@@ -76,13 +76,14 @@ async function setup(context, {configured = true} = {}) {
     jar?.accept(response);
     return response;
   }
-  async function login(account = 'user-a', jar = cookieJar()) {
-    const start = await request('/api/auth/start', {jar});
+  async function login(account = 'user-a', jar = cookieJar(), {returnTo} = {}) {
+    const startPath = '/api/auth/start' + (returnTo === undefined ? '' : '?' + new URLSearchParams({returnTo}));
+    const start = await request(startPath, {jar});
     assert.equal(start.status, 302);
     const authorization = new URL(start.headers.get('location'));
     const callback = await request(`/api/auth/callback?code=${account}&state=${encodeURIComponent(authorization.searchParams.get('state'))}`, {jar});
     assert.equal(callback.status, 302);
-    assert.equal(callback.headers.get('location'), `${origin}/#overview`);
+    assert.equal(callback.headers.get('location'), `${origin}/#dashboard`);
     const session = await (await request('/api/auth/session', {jar})).json();
     assert.equal(session.authenticated, true);
     return {jar, session, authorization};
@@ -125,6 +126,27 @@ test('authorization uses code, state, PKCE and offline access with encrypted per
   assert.match(secure, /; Secure$/);
   assert.ok(secure.includes(`Max-Age=${SESSION_SECONDS}`));
   assert.ok(!secure.includes('Domain='));
+});
+
+test('OAuth returns to the canonical dashboard for default, explicit and legacy targets', async context => {
+  const {login, origin} = await setup(context);
+  for (const returnTo of [undefined, '/#dashboard', '/#overview', 'https://another.example/steal-session', '//another.example/#dashboard']) {
+    const {authorization} = await login('user-a', cookieJar(), {returnTo});
+    assert.equal(authorization.searchParams.get('redirect_uri'), `${origin}/api/auth/callback`);
+    assert.equal(authorization.searchParams.has('returnTo'), false, 'Google only receives the fixed callback URL');
+  }
+});
+
+test('cancelled legacy sign-in returns its error to the dashboard without creating a session', async context => {
+  const {request, calls, origin} = await setup(context), jar = cookieJar();
+  const start = await request('/api/auth/start?' + new URLSearchParams({returnTo: '/#overview'}), {jar});
+  const state = new URL(start.headers.get('location')).searchParams.get('state');
+  const callback = await request('/api/auth/callback?' + new URLSearchParams({error: 'access_denied', state}), {jar});
+  assert.equal(callback.status, 302);
+  assert.equal(callback.headers.get('location'), `${origin}/?auth_error=ACCESS_DENIED#dashboard`);
+  assert.equal(calls.length, 0);
+  assert.equal(jar.values.has('depositly_oauth'), false);
+  assert.equal((await (await request('/api/auth/session', {jar})).json()).authenticated, false);
 });
 
 test('a new server instance restores the account and silently renews Google access', async context => {
@@ -188,14 +210,14 @@ test('OAuth callback rejects state mismatches and pending callbacks after sign-o
   const {request, calls} = await setup(context), jar = cookieJar();
   const start = await request('/api/auth/start', {jar}), target = new URL(start.headers.get('location'));
   const bad = await request('/api/auth/callback?code=user-a&state=wrong', {jar});
-  assert.match(bad.headers.get('location'), /auth_error=AUTH_STATE_INVALID/);
+  assert.match(bad.headers.get('location'), /\?auth_error=AUTH_STATE_INVALID#dashboard$/);
   assert.equal(calls.length, 0);
   const secondStart = await request('/api/auth/start', {jar}), state = new URL(secondStart.headers.get('location')).searchParams.get('state');
   const pendingTransaction = jar.values.get('depositly_oauth');
   await request('/api/auth/logout', {jar, method: 'POST'});
   jar.values.set('depositly_oauth', pendingTransaction);
   const stale = await request(`/api/auth/callback?code=user-a&state=${state}`, {jar});
-  assert.match(stale.headers.get('location'), /auth_error=AUTH_STATE_INVALID/);
+  assert.match(stale.headers.get('location'), /\?auth_error=AUTH_STATE_INVALID#dashboard$/);
   assert.equal(calls.length, 0);
   assert.ok(target.searchParams.get('state'));
 });
@@ -204,7 +226,7 @@ test('an unsolicited OAuth callback cannot sign out an existing Google account',
   const {login, request, calls} = await setup(context), {jar} = await login();
   const sessionCookie = jar.values.get('depositly_session'), count = calls.length;
   const response = await request('/api/auth/callback?code=untrusted&state=untrusted', {jar});
-  assert.match(response.headers.get('location'), /auth_error=AUTH_STATE_INVALID/);
+  assert.match(response.headers.get('location'), /\?auth_error=AUTH_STATE_INVALID#dashboard$/);
   assert.equal(jar.values.get('depositly_session'), sessionCookie);
   assert.equal(calls.length, count);
   assert.equal((await (await request('/api/auth/session', {jar})).json()).authenticated, true);

@@ -108,7 +108,7 @@ export function createCloudSync({validateData = value => value, onStatus = () =>
     } catch (error) { if (current === generation) { if (error.code === 'INVALID_ACCOUNT') clear(); update('error', error.message); } throw error; }
     finally { finish(current); }
   }
-  async function connect({returnTo = '/#overview'} = {}) {
+  async function connect({returnTo = '/#dashboard'} = {}) {
     begin();
     const current = generation;
     update('connecting', 'Taking you to Google sign-in…');
@@ -116,7 +116,8 @@ export function createCloudSync({validateData = value => value, onStatus = () =>
       const config = configuration || await prepare();
       ensure(current);
       if (!config?.configured) throw new CloudError('Persistent Google accounts need to be configured by the website owner.', 'ACCOUNT_SETUP_REQUIRED', {missing: config?.missing || [], redirectUri: config?.redirectUri});
-      const target = typeof returnTo === 'string' && /^\/#(?:overview|deposits|calendar|payments|backup|settings)$/.test(returnTo) ? returnTo : '/#overview';
+      const route = returnTo === '/#overview' ? '/#dashboard' : returnTo;
+      const target = typeof route === 'string' && /^\/#(?:dashboard|deposits|calendar|payments|backup|settings)$/.test(route) ? route : '/#dashboard';
       const url = `/api/auth/start?returnTo=${encodeURIComponent(target)}`;
       signal('signing-in');
       navigate(url);

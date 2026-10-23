@@ -220,12 +220,12 @@ export function createApiHandler({env = process.env, fetchImpl = globalThis.fetc
           const session = {version: 1, user, binding: transaction.binding, csrfToken: randomToken(), accessToken: tokens.value.access_token, refreshToken: tokens.value.refresh_token, accessExpiresAt: now() + Number(tokens.value.expires_in) * 1000, createdAt: now(), expiresAt: now() + SESSION_SECONDS * 1000};
           if (Number(tokens.value.refresh_token_expires_in) > 0) session.refreshExpiresAt = now() + Number(tokens.value.refresh_token_expires_in) * 1000;
           writeSession(response, config, session);
-          return redirect(response, `${config.origin}/#overview`);
+          return redirect(response, `${config.origin}/#dashboard`);
         } catch (error) {
           // An unsolicited callback must not become a cross-site sign-out action.
           if (validTransaction) clearSession(response, config);
           const code = ['AUTH_STATE_INVALID', 'ACCESS_DENIED', 'OFFLINE_ACCESS_REQUIRED'].includes(error.code) ? error.code : 'AUTH_FAILED';
-          return redirect(response, `${config.origin}/?auth_error=${code}#overview`);
+          return redirect(response, `${config.origin}/?auth_error=${code}#dashboard`);
         }
       }
       if (group === 'auth' && action === 'session') {

@@ -86,26 +86,49 @@ test('sign-in uses top-level same-origin navigation without an SDK or popup', as
   const {create, navigations, requests} = serverHarness({session: null});
   const cloud = create();
   await cloud.prepare();
-  const result = await cloud.connect({returnTo: '/#overview'});
+  const result = await cloud.connect();
   assert.equal(result.redirecting, true);
   assert.equal(navigations.length, 1);
   const target = new URL(navigations[0], 'https://depositly.example');
   assert.equal(target.origin, 'https://depositly.example');
   assert.equal(target.pathname, '/api/auth/start');
-  assert.equal(target.searchParams.get('returnTo'), '/#overview');
+  assert.equal(target.searchParams.get('returnTo'), '/#dashboard');
   assert.equal(requests.filter(request => request.url.pathname === '/api/auth/config').length, 1, 'prepared readiness is reused for the click');
   assert(requests.every(request => request.url.origin === 'https://depositly.example'));
   assert.equal(cloud.getStatus().connected, false, 'navigation does not imply a completed Google login');
 });
 
+test('dashboard sign-in targets accept the canonical route and normalize legacy overview', async () => {
+  for (const returnTo of ['/#dashboard', '/#overview']) {
+    const {create, navigations} = serverHarness({session: null});
+    await create().connect({returnTo});
+    const target = new URL(navigations[0], 'https://depositly.example');
+    assert.equal(target.origin, 'https://depositly.example');
+    assert.equal(target.pathname, '/api/auth/start');
+    assert.equal(target.searchParams.get('returnTo'), '/#dashboard');
+  }
+});
+
+test('other allowed workspace sign-in targets remain relative to this website', async () => {
+  for (const page of ['deposits', 'calendar', 'payments', 'backup', 'settings']) {
+    const {create, navigations} = serverHarness({session: null});
+    await create().connect({returnTo: '/#' + page});
+    const target = new URL(navigations[0], 'https://depositly.example');
+    assert.equal(target.origin, 'https://depositly.example');
+    assert.equal(target.pathname, '/api/auth/start');
+    assert.equal(target.searchParams.get('returnTo'), '/#' + page);
+  }
+});
+
 test('a supplied return URL cannot redirect Google sign-in away from this website', async () => {
-  const {create, navigations} = serverHarness({session: null});
-  const cloud = create();
-  await cloud.connect({returnTo: 'https://another.example/steal-session'});
-  const target = new URL(navigations[0], 'https://depositly.example');
-  assert.equal(target.origin, 'https://depositly.example');
-  assert.equal(target.pathname, '/api/auth/start');
-  assert.equal(target.searchParams.get('returnTo'), '/#overview');
+  for (const returnTo of ['https://another.example/steal-session', '//another.example/#dashboard', '/#dashboard?next=https://another.example', '/#overview/../backup', '/#unknown', null]) {
+    const {create, navigations} = serverHarness({session: null});
+    await create().connect({returnTo});
+    const target = new URL(navigations[0], 'https://depositly.example');
+    assert.equal(target.origin, 'https://depositly.example');
+    assert.equal(target.pathname, '/api/auth/start');
+    assert.equal(target.searchParams.get('returnTo'), '/#dashboard');
+  }
 });
 
 test('Drive reads validate the Android snapshot and use cookie credentials without bearer tokens', async () => {
