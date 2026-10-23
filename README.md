@@ -98,7 +98,8 @@ The Android parity test runs when the sibling `Depositly/app/assets/index.html` 
 
 | File | Purpose |
 | --- | --- |
-| `index.html`, `assets/app.js`, `assets/web.css` | Application and responsive theme |
+| `index.html`, `assets/app.js`, `assets/web.css` | Application and functional component styles |
+| `assets/redesign.css` | Responsive blue and ink visual system, dark theme, and reduced-motion-aware animation |
 | `assets/account-ui.js` | Connected Google profile and photo fallback |
 | `assets/bank-ui.js`, `assets/bank-logos.js`, `assets/banks/` | Bank picker, original logos, and crop metadata |
 | `assets/data-engine.js` | Android-compatible calculations and backups |
