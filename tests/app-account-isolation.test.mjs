@@ -33,7 +33,9 @@ async function boot(context, options = {}) {
     }
     return nodes.get(id);
   };
-  const values = new Map([[accountWorkspaceKey(alice), JSON.stringify(workspace(alice, 'ALICE_PRIVATE_DEPOSIT'))], [accountWorkspaceKey(bob), JSON.stringify(workspace(bob, 'BOB_PRIVATE_DEPOSIT'))]]);
+  const savedAlice=workspace(alice,'ALICE_PRIVATE_DEPOSIT');
+  if(options.defaultDepositView)savedAlice.data.defaultDepositView=options.defaultDepositView;
+  const values = new Map([[accountWorkspaceKey(alice), JSON.stringify(savedAlice)], [accountWorkspaceKey(bob), JSON.stringify(workspace(bob, 'BOB_PRIVATE_DEPOSIT'))]]);
   const storage = {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key)};
   const server = {user: alice, failSession: !!options.failSession, pendingSession: options.pendingSession || null, sessionCalls: 0};
   const session = user => user ? {authenticated: true, configured: true, user, csrfToken: 'private-test-csrf-token', expiresAt: Date.now() + 100000} : {authenticated: false, configured: true};
@@ -66,9 +68,36 @@ async function boot(context, options = {}) {
   await until(()=>node('connect-top').disabled===false,'initial account backup check should finish');
   const dispatchWindow = (type, event = {}) => { for (const callback of windowListeners.get(type) || []) callback(event); };
   const dispatchDocument = async (type, event) => { for (const callback of documentListeners.get(type) || []) await callback(event); };
-  const click = action => dispatchDocument('click', {target: {dataset: {action}, tagName: 'BUTTON', disabled: false, closest() { return this; }}, preventDefault() {}});
+  const click = action => dispatchDocument('click', {target: {dataset: typeof action==='string'?{action}:action, tagName: 'BUTTON', disabled: false, closest() { return this; }}, preventDefault() {}});
   return {server, storage, node, renders, session, dispatchWindow, dispatchDocument, click};
 }
+
+test('saved Android table preferences open as cards without modifying the backup preference', async context => {
+ const app=await boot(context,{defaultDepositView:'grid'}),saved=app.storage.getItem(accountWorkspaceKey(alice));
+ await app.click({nav:'deposits'});
+ assert.match(app.node('app').innerHTML,/class="holdings-grid"/);
+ assert.match(app.node('app').innerHTML,/aria-label="Switch to table view"/);
+ await app.click('holding-view');
+ assert.doesNotMatch(app.node('app').innerHTML,/class="holdings-grid"/);
+ assert.match(app.node('app').innerHTML,/aria-label="Switch to card view"/);
+ await app.click('holding-view');
+ assert.match(app.node('app').innerHTML,/class="holdings-grid"/);
+ assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),saved,'layout changes must not rewrite Android settings or deposits');
+});
+
+test('opening an imported backup returns a table session to cards', async context => {
+ const app=await boot(context);
+ await app.click({nav:'deposits'});
+ await app.click('holding-view');
+ const incoming={...emptyState(),defaultDepositView:'grid',assets:[asset('imported','Imported deposit')]};
+ await app.dispatchDocument('change',{target:{id:'file-import',value:'backup.json',files:[{name:'backup.json',size:500,text:async()=>JSON.stringify(Transfer.exportData(incoming))}]}});
+ assert.equal(app.node('modal').open,true);
+ await app.click({action:'apply-import',mode:'replace'});
+ assert.equal(app.node('modal').open,false);
+ assert.match(app.node('app').innerHTML,/class="holdings-grid"/);
+ assert.match(app.node('app').innerHTML,/Imported deposit/);
+ assert.equal(JSON.parse(app.storage.getItem(accountWorkspaceKey(alice))).data.defaultDepositView,'grid');
+});
 
 test('actual app keeps hidden account records protected after a cross-tab verification failure', async context => {
   const app = await boot(context), original = app.storage.getItem(accountWorkspaceKey(alice));
