@@ -79,7 +79,7 @@ For local Google sign-in, add the exact redirect URI `http://localhost:4173/api/
 
 The Android parity test runs when the sibling `Depositly/app/assets/index.html` exists. Otherwise that one test is skipped; set `DEPOSITLY_ANDROID_SOURCE` to its absolute path to run it from another checkout. Other tests run without the Android source. Real authorization, durable browser sessions, and a phone backup round trip still need the configured deployment and your account/device; mocks do not prove those external settings.
 
-`npm run build` creates the generated `public/` directory from **only** `index.html`, `config.js`, `assets/`, `privacy/`, and `terms/`. API functions and `server/` libraries remain outside the public output. `npm run package` creates `dist/depositly-website-vercel.zip` containing the complete Vercel project, including API/server source and build scripts, plus an empty-secret `.env.example`. It excludes actual environment files, tests, Git history, logs, temporary files, and generated output. Deploy the extracted project's root, not the generated archive directory.
+`npm run build` bundles the official Vercel Web Analytics and Speed Insights browser SDKs with esbuild and creates the generated `public/` directory from **only** `index.html`, `config.js`, `assets/`, `privacy/`, and `terms/`. API functions and `server/` libraries remain outside the public output. `npm run package` creates `dist/depositly-website-vercel.zip` containing the complete Vercel project, including API/server source and build scripts, plus an empty-secret `.env.example`. It excludes actual environment files, tests, Git history, logs, temporary files, and generated output. Deploy the extracted project's root, not the generated archive directory.
 
 ## Vercel project settings
 
@@ -89,7 +89,7 @@ The Android parity test runs when the sibling `Depositly/app/assets/index.html` 
 | Root Directory | Repository root at `E:\Github\depositly-website` |
 | Build Command | `node scripts/build.mjs` |
 | Output Directory | `public` |
-| Install Command | Empty (no dependencies) |
+| Install Command | `npm ci --include=dev` |
 | Environment variables | The four server values listed above |
 
 `vercel.json` sets the build values. `.vercelignore` keeps secrets, tests, and generated directories out of deployment inputs while retaining the build scripts and server source. Do not deploy only `public/` or upload this as a static-only site: persistent authentication requires the Node.js API functions. Keep homepage, privacy, and terms URLs current in Google's consent-screen branding.
@@ -116,3 +116,9 @@ The Android parity test runs when the sibling `Depositly/app/assets/index.html` 
 | `privacy/`, `terms/` | Public policy pages |
 
 Publisher: Greenstone Solutions LLC. Support: [air.expx2@gmail.com](mailto:air.expx2@gmail.com).
+
+## Web Analytics and Speed Insights
+
+The website loads `@vercel/analytics` and `@vercel/speed-insights` through their vanilla JavaScript entry points. The site uses static HTML and JavaScript rather than Next.js. SDK imports are bundled into `/assets/observability.js`; the same bundle is served by the local preview. Only HTTPS pages outside localhost initialize telemetry. Dashboard sections use fixed route names; URL queries, arbitrary fragments, API routes, and custom events are excluded. Investment records and Google identity fields are not passed to either SDK.
+
+Vercel must provision the corresponding project features for its collection endpoints to accept data. SDK installation and deployment alone do not confirm that dashboard-side activation is complete. See the [Web Analytics quickstart](https://vercel.com/docs/analytics/quickstart) and [Speed Insights quickstart](https://vercel.com/docs/speed-insights/quickstart).

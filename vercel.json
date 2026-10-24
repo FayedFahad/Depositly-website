@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "node scripts/build.mjs",
-  "installCommand": "",
+  "installCommand": "npm ci --include=dev",
   "outputDirectory": "public",
   "headers": [
     {

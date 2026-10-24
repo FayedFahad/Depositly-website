@@ -2,6 +2,8 @@ import { createServer } from 'node:http';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import {build} from 'esbuild';
+import {observabilityBuildOptions} from './observability.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 // Only the explicit development file is loaded. Values never enter static output.
@@ -25,6 +27,7 @@ try {
   }
 } catch (error) { if (error.code !== 'ENOENT') throw error; }
 const port = Number(process.env.PORT || 4173);
+const observability=(await build({...observabilityBuildOptions,write:false})).outputFiles[0].contents;
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.txt': 'text/plain; charset=utf-8' };
 
 const server = createServer(async (request, response) => {
@@ -52,6 +55,10 @@ const server = createServer(async (request, response) => {
     response.writeHead(405, { Allow: 'GET, HEAD' });
     response.end('Method not allowed');
     return;
+  }
+  if(requestUrl.pathname==='/assets/observability.js'){
+    response.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8','Content-Length':observability.length});
+    response.end(request.method==='HEAD'?undefined:observability);return;
   }
   try {
     let pathname = decodeURIComponent(requestUrl.pathname);

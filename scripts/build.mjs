@@ -1,6 +1,8 @@
 import { copyFile, lstat, mkdir, readdir, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import {build} from 'esbuild';
+import {observabilityBuildOptions} from './observability.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.resolve(root, 'public');
@@ -30,4 +32,10 @@ async function copyPublic(relative) {
 }
 // Never copy the repository root: server code and environment files stay private.
 for (const relative of ['index.html', 'config.js', 'assets', 'privacy', 'terms']) await copyPublic(relative);
+await build({...observabilityBuildOptions,outfile:path.join(output,'assets','observability.js')});
+await mkdir(path.join(output,'assets','licenses'),{recursive:true});
+for(const name of ['analytics','speed-insights']){
+  await copyFile(path.join(root,'node_modules','@vercel',name,'LICENSE'),path.join(output,'assets','licenses',`vercel-${name}.txt`));
+  count++;
+}
 console.log(`Built ${count} public files in ${output}`);
