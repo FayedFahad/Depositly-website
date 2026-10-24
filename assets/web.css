@@ -1,15 +1,15 @@
 /* Depositly Core Web Primitives */
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --ink: #0f172a;
-  --muted: #64748b;
-  --line: #e2e8f0;
-  --forest: #2563eb;
-  --lime: #eff6ff;
-  --soft: #f1f5f9;
-  --green: #059669;
-  --purple: #7c3aed;
+  --bg: #FFF8CF;
+  --surface: #fffdf2;
+  --ink: #18351b;
+  --muted: #4b6346;
+  --line: #d8d9ae;
+  --forest: #2A7C13;
+  --lime: #e6efc8;
+  --soft: #FBE6C2;
+  --green: #2A7C13;
+  --purple: #7d571f;
   --red: #e11d48;
   --shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
   --radius: 14px;

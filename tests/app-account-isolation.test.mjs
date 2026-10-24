@@ -85,6 +85,18 @@ test('saved Android table preferences open as cards without modifying the backup
  assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),saved,'layout changes must not rewrite Android settings or deposits');
 });
 
+test('allocation links open only the chosen deposit type in the current workspace',async context=>{
+ const app=await boot(context);
+ await app.click({action:'allocation',value:'FDR'});
+ assert.match(app.node('app').innerHTML,/<h1>My deposits<\/h1>/);
+ assert.match(app.node('app').innerHTML,/aria-pressed="true" data-action="deposit-type" data-value="FDR"/);
+ assert.match(app.node('app').innerHTML,/class="card holding-card"/);
+ await app.click({action:'allocation',value:'NSC'});
+ assert.match(app.node('app').innerHTML,/aria-pressed="true" data-action="deposit-type" data-value="NSC"/);
+ assert.doesNotMatch(app.node('app').innerHTML,/class="card holding-card"/);
+ assert.doesNotMatch(app.node('app').innerHTML,/BOB_PRIVATE_DEPOSIT/);
+});
+
 test('opening an imported backup returns a table session to cards', async context => {
  const app=await boot(context);
  await app.click({nav:'deposits'});

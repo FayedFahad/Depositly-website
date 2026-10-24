@@ -14,7 +14,7 @@ export function createCardMotion() {
  }
  function move(event){
   if(document.hidden||reduced.matches||!fine.matches||event.pointerType==='touch')return;
-  const card=event.target.closest('.holding-card');
+  const card=event.target.closest('.holding-card,.hero,.metric');
   if(!card){reset();return;}
   if(card!==active){reset();active=card;}
   point={x:event.clientX,y:event.clientY};
