@@ -16,14 +16,14 @@ Keep the deposit tracker as the homepage. Help users inspect their principal, ch
 
 ## Operating Context
 
-Users enter records in the browser or transfer Android-compatible backups through JSON files and optional Google Drive snapshots. Google sign-in opens an account-specific workspace. The app separates Self deposits from Others deposits; only Self deposits contribute to financial totals, while the calendar includes both.
+Users enter records in the browser or transfer Android-compatible backups through JSON files and automatic Google Drive synchronization. Google sign-in opens an account-specific workspace. The app separates Self deposits from Others deposits; only Self deposits contribute to financial totals, while the calendar includes both.
 
 ## Capabilities and Constraints
 
 - Preserve deposits, receipts, calendar, exports, import review, account isolation, and preferences.
 - Preserve the Android calculations, including the 360-day interest year and TDS.
 - Preserve the Vercel Node API and same-origin Google authentication. Do not substitute static-only hosting.
-- Drive backups exchange complete snapshots; do not describe them as continuous live synchronization.
+- A connected Google account uses one shared registry. Saved edits synchronize quietly, including offline retries, without backup review prompts. Keep dated versions available for explicit restore. Background timing remains subject to connectivity and OS scheduling.
 - Rename Overview to Dashboard. Keep existing overview links working.
 - Keep the existing vanilla JavaScript, HTML, and CSS architecture.
 

@@ -37,7 +37,7 @@ async function boot(context, options = {}) {
   if(options.defaultDepositView)savedAlice.data.defaultDepositView=options.defaultDepositView;
   const values = new Map([[accountWorkspaceKey(alice), JSON.stringify(savedAlice)], [accountWorkspaceKey(bob), JSON.stringify(workspace(bob, 'BOB_PRIVATE_DEPOSIT'))]]);
   const storage = {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key)};
-  const server = {user: alice, failSession: !!options.failSession, pendingSession: options.pendingSession || null, sessionCalls: 0};
+  const server = {user: alice, failSession: !!options.failSession, pendingSession: options.pendingSession || null, sessionCalls: 0, syncSaves:0};
   const session = user => user ? {authenticated: true, configured: true, user, csrfToken: 'private-test-csrf-token', expiresAt: Date.now() + 100000} : {authenticated: false, configured: true};
   replace('document', {hidden: false, body: {classList: classList()}, getElementById: node, querySelector: node,
     addEventListener: (type, callback) => register(documentListeners, type, callback)});
@@ -58,6 +58,8 @@ async function boot(context, options = {}) {
       return response(session(server.user));
     }
     if (path === '/api/drive/latest') return response({latest: null});
+    if (path === '/api/drive/registry') return response({unchanged:true,heads:(new URL(url,'https://depositly.example').searchParams.get('known')||'').split(',').filter(Boolean)});
+    if (path === '/api/drive/save-version') {server.syncSaves++;return response({file:{id:'sync-'+server.user.sub,createdTime:'2026-10-24T00:00:00Z'}});}
     if (path === '/api/auth/config') return response({configured: true, missing: []});
     throw Error(`Unexpected endpoint ${path}`);
   });
@@ -66,6 +68,7 @@ async function boot(context, options = {}) {
   if(options.beforeReady)await options.beforeReady({server, node, renders, session, retry: async()=>{for(const callback of documentListeners.get('click')||[])await callback({target:{dataset:{action:'retry-account'},tagName:'BUTTON',disabled:false,closest(){return this;}},preventDefault(){}});}});
   await until(() => node('app').innerHTML.includes('ALICE_PRIVATE_DEPOSIT') && node('app').innerHTML.includes('aria-busy="false"'), 'initial verified Alice workspace should open');
   await until(()=>node('connect-top').disabled===false,'initial account backup check should finish');
+  await until(()=>server.syncSaves>0,'initial quiet sync should save the existing local edits');await nextTurn();
   const dispatchWindow = (type, event = {}) => { for (const callback of windowListeners.get(type) || []) callback(event); };
   const dispatchDocument = async (type, event) => { for (const callback of documentListeners.get(type) || []) await callback(event); };
   const click = action => dispatchDocument('click', {target: {dataset: typeof action==='string'?{action}:action, tagName: 'BUTTON', disabled: false, closest() { return this; }}, preventDefault() {}});

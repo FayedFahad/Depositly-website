@@ -2,7 +2,7 @@
 
 A responsive companion for Depositly Android: deposits, National Savings Certificates, payment schedules, receipts, ownership, and preferences. Google sign-in opens your personal tracker workspace and the same private Google Drive backups as the phone app. It does not create a bank account or a separate financial database.
 
-The website uses static frontend assets plus Node.js API functions on Vercel. Google OAuth credentials and tokens are handled by the server and are not exposed to page JavaScript. A persistent encrypted, HttpOnly session cookie carries the opaque session needed to restore your connection after reopening the page. Local browser copies are separated by Google account; shared phone and web records continue to use Google Drive snapshots.
+The website uses static frontend assets plus Node.js API functions on Vercel. Google OAuth credentials and tokens are handled by the server and are not exposed to page JavaScript. A persistent encrypted, HttpOnly session cookie carries the opaque session needed to restore your connection after reopening the page. Local browser copies are separated by Google account; shared phone and web records synchronize through immutable Google Drive versions.
 
 ## Configure Google and Vercel
 
@@ -37,7 +37,7 @@ The website checks the server session when it opens and restores the connected a
 
 Browser cookie deletion or restrictions, a long inactive period, revoked Google access, OAuth testing expiry, or a changed server session secret can require reconnecting. Keep `SESSION_SECRET` unchanged when redeploying unless you intend to invalidate all existing website sessions. Signing out of Depositly does not sign out of Google in other websites or delete Drive backups.
 
-Each connected Google account uses a separate browser workspace and its own private Drive data. Signing out shows the separate guest workspace; the account's local cache is kept for the next verified sign-in with that same account. Another account does not automatically inherit it. Existing records from the old single-workspace format require an explicit review before adoption, and the original is retained as a recovery copy. Review any import or migration decision before linking records. These are local browser caches rather than encrypted storage, so protect access to the browser profile.
+Each connected Google account uses a separate browser workspace and its own private Drive data. Signing out shows the separate guest workspace; the account's local cache is kept for the next verified sign-in with that same account. Another account does not automatically inherit it. Records from the old single-workspace format migrate automatically when their owner matches the verified account. Unassigned records require an explicit choice before linking, and the original is retained as a recovery copy. These are local browser caches rather than encrypted storage, so protect access to the browser profile.
 
 The header shows your full Google name, photo, and connection status; the sidebar and account page also show your email. Missing photos fall back to initials. The interface uses a verified active session rather than a saved display name to decide whether you are connected.
 
@@ -45,12 +45,12 @@ If the same URL connects in Edge but fails in your regular Chrome profile, try C
 
 ## Bring phone records to the website
 
-1. On Android, open **Settings → Account & cloud backup**, connect Google, and choose **Back up now**. Wait for **Backup saved to Google Drive**.
-2. Sign in to the website with the same account. A new, empty account workspace opens the latest validated phone backup automatically. Existing browser records and older saved workspaces require review before loading or merging a backup.
-3. After changing the phone's records, finish its backup, then check for the newer snapshot on the website. While open and connected, the website can check for newer snapshots and lets you review them before replacing local edits.
-4. Save website changes to Google Drive explicitly. Restore or merge that backup through Android's cloud settings to bring the changes to the phone. Download a JSON copy before replacing records on either device.
+1. Connect Google on Android and sign in to the website with the same account. Both use the same private registry.
+2. Saved edits sync automatically, with a short debounce on the website. Each side pulls on opening/resuming and checks every 15 seconds while active. Routine sync has no review prompts or success notifications.
+3. Offline edits remain local and retry when connectivity returns. Android also schedules persisted network jobs and a periodic refresh; the OS controls background timing. A closed website cannot run sync, and a force-stopped or offline phone cannot update instantly.
+4. Open **Backup versions** on either platform to restore a dated version. Restoration creates a new latest revision, preserving previous history. Explicit file imports still have their own review screen.
 
-Persistent sign-in does not change Android's backup design: the phone uploads complete snapshots and does not continuously receive another device's edits. A closed phone app will not update instantly. Finish one device's backup before editing on the other. Saving from the website checks for a newer snapshot before writing, but Google Drive does not provide an atomic compare-and-create transaction, so avoid simultaneous device saves.
+Versions are immutable full JSON files named with UTC timestamps in Drive's private app-data folder. Field revisions merge independent edits, deletion markers prevent stale devices from reviving removed records, and concurrent uploads remain separate heads until merged. Conflicting changes to the same field resolve deterministically by revision timestamp/counter/device identity. Versions are retained without automatic deletion; Google storage limits still apply. Use the updated app and website together: older clients do not understand this sync protocol.
 
 Full JSON downloads use Android's investment export format and preserve Self and Others deposits, receipt history and snapshots, currency, number format, theme, and default deposit view. Google Drive snapshots additionally retain the phone's native reminder enabled/time preferences. The website can preserve and edit these preferences for the next Android restore; it does not deliver phone or browser notifications. CSV exports contain investment records, not the complete receipt history.
 

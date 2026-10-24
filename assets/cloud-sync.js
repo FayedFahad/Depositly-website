@@ -51,9 +51,10 @@ async function uploadBody(payload) {
 
 export function createCloudSync({validateData = value => value, onStatus = () => {}, fetchImpl = globalThis.fetch?.bind(globalThis), navigate = url => globalThis.location.assign(url)} = {}) {
   let user = null, csrfToken = '', expiresAt = 0, busy = false, generation = 0, latestFile = null;
+  let quiet=false;
   let phase = 'disconnected', message = 'Sign in with Google to open your account.', configuration = null;
   const active = new Set();
-  const getStatus = () => ({connected: !!user, authenticated: !!user, persistent: true, busy, phase, message, user: user ? {...user} : null, latestFile: latestFile ? {...latestFile} : null, expiresAt, configured: configuration?.configured ?? null});
+  const getStatus = () => ({connected: !!user, authenticated: !!user, persistent: true, busy, background:quiet, phase, message, user: user ? {...user} : null, latestFile: latestFile ? {...latestFile} : null, expiresAt, configured: configuration?.configured ?? null});
   function update(next, text) { phase = next; message = text; try { onStatus(getStatus()); } catch {} }
   function ensure(current) { if (current !== generation) throw new CloudError('The Google account changed. Your records were not changed.', 'ACCOUNT_CHANGED'); }
   function clear() { user = null; csrfToken = ''; expiresAt = 0; latestFile = null; }
@@ -169,5 +170,12 @@ export function createCloudSync({validateData = value => value, onStatus = () =>
     } catch (error) { if (current === generation) update(user ? 'error' : 'disconnected', error.message); throw error; }
     finally { finish(current); }
   }
-  return Object.freeze({prepare, restore, connect, readLatest, upload, disconnect, getStatus});
+
+  function beginQuiet(){begin();quiet=true;try{onStatus(getStatus());}catch{}}
+  function finishQuiet(current){quiet=false;finish(current);}
+  async function registry(known='') {const current=requireAccount();beginQuiet();try{return await request('drive/registry?'+new URLSearchParams({known}),{current});}finally{finishQuiet(current);}}
+  async function saveVersion(backup,parents=[]) {const current=requireAccount();validateCloudBackup(backup,validateData);beginQuiet();try{return await request('drive/save-version',{method:'POST',...await uploadBody({backup,parents}),current});}finally{finishQuiet(current);}}
+  async function versions(pageToken='') {const current=requireAccount();beginQuiet();try{return await request('drive/versions?'+new URLSearchParams({pageToken}),{current});}finally{finishQuiet(current);}}
+  async function version(id) {const current=requireAccount();beginQuiet();try{const value=await request('drive/version?'+new URLSearchParams({id}),{current});validateCloudBackup(value.backup,validateData);return value;}finally{finishQuiet(current);}}
+  return Object.freeze({prepare, restore, connect, readLatest, upload, registry, saveVersion, versions, version, disconnect, getStatus});
 }

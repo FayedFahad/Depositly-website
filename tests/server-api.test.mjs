@@ -4,6 +4,7 @@ import http from 'node:http';
 import {gzipSync} from 'node:zlib';
 import {createApiHandler} from '../server/api.mjs';
 import {encryptCookie, decryptCookie, serializeCookie, SESSION_SECONDS} from '../server/auth-session.mjs';
+import {registryQuery} from '../server/registry-drive.mjs';
 
 const CLIENT_ID = '688859064258-h97snetju0b3rts3jltgd210dobn75f1.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -45,21 +46,22 @@ async function setup(context, {configured = true} = {}) {
     if (endpoint.pathname === '/oauth2/v3/userinfo') return googleResponse({sub: account, email: `${account}@example.com`, name: account === 'user-a' ? 'Alice' : 'Bob', given_name: account === 'user-a' ? 'Alice' : 'Bob'});
     if (endpoint.pathname === '/drive/v3/files') {
       assert.equal(endpoint.searchParams.get('spaces'), 'appDataFolder');
-      assert.equal(endpoint.searchParams.get('q'), "name = 'depositly-backup.json' and trashed = false");
-      return googleResponse({files: snapshots.get(account).slice(0, 1).map(item => item.file)});
+      const registry=endpoint.searchParams.get('q')===registryQuery;
+      if(!registry)assert.equal(endpoint.searchParams.get('q'), "name = 'depositly-backup.json' and trashed = false");
+      return googleResponse({files: (registry?snapshots.get(account):snapshots.get(account).slice(0, 1)).map(item => item.file)});
     }
     if (endpoint.pathname.startsWith('/drive/v3/files/')) {
       const item = snapshots.get(account).find(item => item.file.id === endpoint.pathname.split('/').at(-1));
-      return item ? googleResponse(item.backup) : googleResponse({error: 'not_found'}, 404);
+      return item ? googleResponse(endpoint.searchParams.has('fields')?item.file:item.backup) : googleResponse({error: 'not_found'}, 404);
     }
     if (endpoint.pathname === '/upload/drive/v3/files') {
       assert.equal(options.method, 'POST');
       const parts = [...options.body.matchAll(/Content-Type: application\/json; charset=UTF-8\r\n\r\n([\s\S]*?)\r\n--/g)];
       assert.equal(parts.length, 2);
       const metadata = JSON.parse(parts[0][1]), content = JSON.parse(parts[1][1]);
-      assert.equal(metadata.name, 'depositly-backup.json');
+      assert(metadata.name==='depositly-backup.json'||/^Depositly-.*\.json$/.test(metadata.name));
       assert.deepEqual(metadata.parents, ['appDataFolder']);
-      const file = {id: `web-${account}-${++sequence}`, name: metadata.name, createdTime: new Date(clock).toISOString()};
+      const file = {id: `web-${account}-${++sequence}`, name: metadata.name, createdTime: new Date(clock).toISOString(),...(metadata.appProperties?{appProperties:metadata.appProperties}:{})};
       snapshots.get(account).unshift({file, backup: content});
       return googleResponse(file);
     }
@@ -299,4 +301,20 @@ test('encrypted cookies reject tampering, wrong purpose, wrong key and expiratio
   assert.equal(decryptCookie(value, 'session', SESSION_SECRET, 2001), null);
   const fields = value.split('.'); fields[2] = (fields[2][0] === 'A' ? 'B' : 'A') + fields[2].slice(1);
   assert.equal(decryptCookie(fields.join('.'), 'session', SESSION_SECRET, 1000), null);
+});
+
+test('registry endpoints sync quietly, retain dated versions, and enforce account and CSRF guards',async context=>{
+ const api=await setup(context),{jar,session}=await api.login();
+ const headers={'X-Depositly-Account':'user-a','X-CSRF-Token':session.csrfToken};
+ const pulled=await (await api.request('/api/drive/registry',{jar,headers})).json();assert.equal(pulled.backup.data.testTag,'a');assert.deepEqual(pulled.heads,['phone-a']);
+ assert.equal((await api.request('/api/drive/save-version',{jar,method:'POST',data:{backup:pulled.backup,parents:pulled.heads},headers:{'X-Depositly-Account':'user-a'}})).status,403);
+ assert.equal((await api.request('/api/drive/registry',{jar,headers:{'X-Depositly-Account':'user-b'}})).status,403);
+ const saved=await api.request('/api/drive/save-version',{jar,method:'POST',data:{backup:pulled.backup,parents:pulled.heads},headers});assert.equal(saved.status,200);const written=await saved.json();
+ assert.match(written.file.name,/^Depositly-2026-/);assert.equal(api.snapshots.get('user-a').length,2);assert.equal(api.snapshots.get('user-b').length,1);
+ const latest=await (await api.request('/api/drive/registry',{jar,headers})).json();assert.deepEqual(latest.heads,[written.file.id]);
+ const unchanged=await (await api.request('/api/drive/registry?known='+written.file.id,{jar,headers})).json();assert.equal(unchanged.unchanged,true);
+ const history=await (await api.request('/api/drive/versions',{jar,headers})).json();assert.equal(history.files.length,2);
+ const old=await (await api.request('/api/drive/version?id=phone-a',{jar,headers})).json();assert.equal(old.backup.data.testTag,'a');
+ assert((await api.request('/api/drive/version?id=phone-b',{jar,headers})).status>=400);
+ assert(!api.calls.some(call=>call.options.method==='DELETE'));
 });

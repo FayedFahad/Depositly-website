@@ -116,7 +116,8 @@ export function createAccountWorkspaces({storage, legacyKey = LEGACY_WORKSPACE_K
       throw failure('The previous workspace changed in another tab. Review its current copy before opening it.', 'WORKSPACE_CONFLICT');
     }
     const old = candidate.payload;
-    const payload = {data: old.data, reminders: old.reminders, owner: activeSub, dirty: !!old.dirty, updatedAt: old.updatedAt};
+    const payload = {data: old.data, reminders: old.reminders, owner: activeSub, dirty: !!old.dirty, updatedAt: old.updatedAt,
+      ...(typeof old.cloudFileId==='string'?{cloudFileId:old.cloudFileId}:{}),...(old.syncDocument?{syncDocument:old.syncDocument,syncHeads:old.syncHeads||[]}: {})};
     const saved = save(payload);
     candidate = null;
     // Preserve the old key, including guest records, as a recovery copy.

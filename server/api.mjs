@@ -1,3 +1,4 @@
+import {createRegistryDrive} from './registry-drive.mjs';
 import {gzipSync, gunzipSync} from 'node:zlib';
 import {normalizeBackup} from '../assets/data-engine.js';
 import {SESSION_SECONDS, TRANSACTION_SECONDS, randomToken, pkceChallenge, equalSecret, encryptCookie, decryptCookie, parseCookies, cookieNames, serializeCookie, appendCookies} from './auth-session.mjs';
@@ -250,6 +251,18 @@ export function createApiHandler({env = process.env, fetchImpl = globalThis.fetc
         writeBinding(response, config, randomToken());
         appendCookies(response, [serializeCookie(cookieNames(config.secure).transaction, '', {secure: config.secure, maxAge: 0})]);
         return json(response, 200, {authenticated: false});
+      }
+      if(group==='drive'&&['registry','versions','version','save-version'].includes(action)){
+        const write=action==='save-version';requestMethod(request,write?'POST':'GET');
+        const session=await authenticated(request,response,config,{write});
+        const drive=createRegistryDrive({request:(path,options)=>driveRequest(path,session,response,config,options),validateBackup,now});
+        const params=new URL(request.url,config.origin).searchParams;
+        let result;
+        if(write){const input=await requestBody(request);result=await drive.save(input.backup,input.parents);}
+        else if(action==='versions')result=await drive.history(params.get('pageToken')||undefined);
+        else if(action==='version')result=await drive.version(params.get('id'));
+        else result=await drive.read(params.get('known')||'');
+        writeSession(response,config,session);return json(response,200,result);
       }
       if (group === 'drive' && action === 'latest') {
         requestMethod(request, 'GET');
