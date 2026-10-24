@@ -5,6 +5,4 @@ public/
 *.log
 .env*
 !.env.example
-.impeccable/*
-!.impeccable/design.json
-!.impeccable/surfaces/
+.impeccable/
