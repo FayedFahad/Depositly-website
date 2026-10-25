@@ -52,6 +52,8 @@ function normalizedCurrency(value){if(value===undefined)return 'BDT';if(typeof v
 const isObject=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function validDate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&root.FDR.iso(root.FDR.parse(s))===s&&s>='1900-01-01'&&s<='2199-12-31';}
 function text(v,max,optional=false){return (optional&&v===undefined)||(typeof v==='string'&&v.length<=max);}
+function bankText(value,max,optional=false){return optional&&value===undefined||typeof value==='string'&&value.length<=max&&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(value)&&(optional||value.trim().length>0);}
+function validBankAccount(a){return isObject(a)&&typeof a.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(a.id)&&bankText(a.bankId,100,true)&&bankText(a.bankName,150)&&bankText(a.accountTitle,120)&&bankText(a.accountNumber,100)&&bankText(a.branchName,150)&&bankText(a.routingNumber,100)&&bankText(a.accountType,100,true);}
 function validCycle(a){return a.cycleUnit===undefined?[1,3,6,12,100].includes(a.cycle):['days','months'].includes(a.cycleUnit)&&Number.isInteger(a.cycle)&&a.cycle>=1&&a.cycle<=(a.cycleUnit==='days'?36525:1200);}
 function validRenewal(a){
  if(a.autoRenew!==undefined&&typeof a.autoRenew!=='boolean')return false;
@@ -69,6 +71,9 @@ function migrate(input){
  if(input.format&&input.minReaderVersion>READER_VERSION)throw Error('This file needs a newer version of Depositly. Update the app before importing.');
  if(!input.format&&![1,2].includes(input.version))throw Error('Unsupported backup version. Update Depositly to import it.');
  if(!Array.isArray(input.assets)||input.assets.length>500||!isObject(input.paid))throw Error('Invalid or oversized investment list.');
+ const bankAccounts=input.bankAccounts===undefined?[]:input.bankAccounts,bankIds=new Set();
+ if(!Array.isArray(bankAccounts)||bankAccounts.length>500)throw Error('Invalid or oversized bank account list.');
+ for(const a of bankAccounts){if(!validBankAccount(a)||bankIds.has(a.id))throw Error('A bank account has invalid details or a duplicate ID.');bankIds.add(a.id);}
  const assets=input.assets.map(a=>({...a,type:['Sanchaypatra','National Savings Certificate','NSC'].includes(a.type)?'NSC':a.type})),ids=new Set();
  for(const a of assets){if(!validAsset(a)||ids.has(a.id))throw Error('An investment has invalid amounts, dates or a duplicate ID.');ids.add(a.id);}
  const scheduled=new Map(assets.flatMap(a=>root.FDR.schedule(a,a.maturity)).map(p=>[p.id,p])),paid={};
@@ -82,7 +87,7 @@ function migrate(input){
   if(!meta||!ids.has(meta.assetId)||!text(meta.name,120)||!validDate(meta.scheduledDate)||!['Interest','Final interest','Principal return'].includes(meta.kind)||!['gross','tax','expected','principal'].every(f=>Number.isSafeInteger(meta[f])&&meta[f]>=0)||meta.assetId!==k.split(':')[0])throw Error('A payment is missing its investment or history details.');
   paid[k]={...r,snapshot:{...meta,type:['Sanchaypatra','National Savings Certificate','NSC'].includes(meta.type)?'NSC':meta.type}};
  }
- const result={...input,version:VERSION,assets,paid,dark:!!input.dark,currency:normalizedCurrency(input.currency),numberFormat:typeof input.numberFormat==='string'?input.numberFormat:'south-asian',defaultDepositView:input.defaultDepositView==='grid'?'grid':'card'};
+ const result={...input,version:VERSION,assets,paid,bankAccounts:bankAccounts.map(a=>({...a})),dark:!!input.dark,currency:normalizedCurrency(input.currency),numberFormat:typeof input.numberFormat==='string'?input.numberFormat:'south-asian',defaultDepositView:input.defaultDepositView==='grid'?'grid':'card'};
  delete result.format;delete result.formatVersion;delete result.minReaderVersion;delete result.exportedAt;delete result.scope;
  return result;
 }
@@ -90,19 +95,25 @@ function exportData(state,selectedIds,now=new Date().toISOString()){
  const ids=new Set(selectedIds||state.assets.map(a=>a.id));
  const assets=state.assets.filter(a=>ids.has(a.id)).map(a=>({...a,type:a.type==='NSC'?'Sanchaypatra':a.type})).sort(compareInstrumentName);
  const paid=Object.fromEntries(Object.entries(state.paid).filter(([k])=>ids.has(k.split(':')[0])));
- return {...state,format:FORMAT,formatVersion:1,minReaderVersion:assets.some(a=>a.autoRenew&&!root.FDR.legacyRenewal(a))?5:normalizedCurrency(state.currency)!=='BDT'?4:assets.some(a=>a.autoRenew||a.cycleUnit!==undefined)?3:assets.some(a=>a.ownership==='others')?2:1,version:1,exportedAt:now,scope:selectedIds?'selected':'all',assets,paid};
+ const result={...state,format:FORMAT,formatVersion:1,minReaderVersion:assets.some(a=>a.autoRenew&&!root.FDR.legacyRenewal(a))?5:normalizedCurrency(state.currency)!=='BDT'?4:assets.some(a=>a.autoRenew||a.cycleUnit!==undefined)?3:assets.some(a=>a.ownership==='others')?2:1,version:1,exportedAt:now,scope:selectedIds?'selected':'all',assets,paid};
+ if(selectedIds)delete result.bankAccounts;else result.bankAccounts=(state.bankAccounts||[]).map(a=>({...a}));
+ return result;
 }
 const equivalent=(a,b)=>JSON.stringify([a.type,a.name,a.principal,a.rate,a.tds,root.FDR.periodSpec(a),a.start,a.first,a.maturity,a.reference||'',a.notes||'',a.bankId||'',a.bankName||'',a.ownership||'self',a.ownerName||'',!!a.autoRenew,a.renewalStop||'',a.autoRenew?a.tenureCount||null:null,a.autoRenew?a.tenureUnit||null:null])===JSON.stringify([b.type,b.name,b.principal,b.rate,b.tds,root.FDR.periodSpec(b),b.start,b.first,b.maturity,b.reference||'',b.notes||'',b.bankId||'',b.bankName||'',b.ownership||'self',b.ownerName||'',!!b.autoRenew,b.renewalStop||'',b.autoRenew?b.tenureCount||null:null,b.autoRenew?b.tenureUnit||null:null]);
 function merge(current,incoming,preview=false){
  const currencyMismatch=!!current.assets.length&&!!incoming.assets.length&&normalizedCurrency(current.currency)!==normalizedCurrency(incoming.currency);
  if(currencyMismatch&&!preview)throw Error('Currencies differ. Select '+normalizedCurrency(incoming.currency)+' in Settings before merging, or replace using the file’s currency. Amounts are not converted.');
- const result=JSON.parse(JSON.stringify(current)),byId=new Map(result.assets.map(a=>[a.id,a]));let added=0,duplicates=0,conflicts=0,payments=0,paymentConflicts=0;
+ const result=JSON.parse(JSON.stringify(current)),byId=new Map(result.assets.map(a=>[a.id,a]));let added=0,duplicates=0,conflicts=0,payments=0,paymentConflicts=0,bankAdded=0,bankDuplicates=0,bankConflicts=0;
+ result.bankAccounts=result.bankAccounts||[];
+ const banksById=new Map(result.bankAccounts.map(a=>[a.id,a])),bankFields=['bankId','bankName','accountTitle','accountNumber','branchName','routingNumber','accountType'];
+ for(const a of incoming.bankAccounts||[]){const old=banksById.get(a.id);if(!old){const copy={...a};result.bankAccounts.push(copy);banksById.set(a.id,copy);bankAdded++;}else if(bankFields.every(field=>(old[field]||'')===(a[field]||'')))bankDuplicates++;else bankConflicts++;}
+ if(result.bankAccounts.length>500)throw Error('Import would exceed the 500-bank-account limit.');
  result.currency=normalizedCurrency(current.assets.length||!incoming.assets.length?current.currency:incoming.currency);result.numberFormat=current.numberFormat||incoming.numberFormat||'south-asian';
  const accepted=new Set();
  for(const a of incoming.assets){let old=byId.get(a.id);if(!old){result.assets.push(a);byId.set(a.id,a);accepted.add(a.id);added++;}else if(equivalent(old,a)){accepted.add(a.id);duplicates++;}else conflicts++;}
  if(result.assets.length>500)throw Error('Import would exceed the 500-investment limit.');
  for(const [k,r] of Object.entries(incoming.paid)){if(!accepted.has(k.split(':')[0]))continue;if(!result.paid[k]){result.paid[k]=r;payments++;}else if(result.paid[k].amount!==r.amount||result.paid[k].date!==r.date|| (result.paid[k].notes||'')!==(r.notes||''))paymentConflicts++;}
- return {state:result,added,duplicates,conflicts,payments,paymentConflicts,currencyMismatch};
+ return {state:result,added,duplicates,conflicts,payments,paymentConflicts,currencyMismatch,bankAdded,bankDuplicates,bankConflicts};
 }
 function csv(rows){return '\ufeff'+rows.map(row=>row.map(v=>{let s=String(v??'');if(typeof v==='string'&&(/^[\s]*[=+@-]/.test(s)||s.startsWith("'")))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');}
 const INSTRUMENT_COLUMNS=['Investment ID','Instrument type','Investment name',"Owner's name",'Ownership','Bank ID','Bank / institution','Certificate reference','Principal','Annual interest rate %','TDS %','Payout cycle','Opening date','Maturity date','First period days','Notes','Payout unit','Tenure value','Tenure unit','Automatic renewal','Renewal term limit','Currency'];
@@ -160,7 +171,7 @@ function readInstrumentCSV(input){
  });
  return migrate({version:VERSION,assets,paid:{},dark:false,currency:fileCurrency||'BDT'});
 }
-root.Transfer={FORMAT,VERSION,validDate,validAsset,snapshot,migrate,exportData,merge,csv,INSTRUMENT_COLUMNS,instrumentCSV,readInstrumentCSV};
+root.Transfer={FORMAT,VERSION,validDate,validAsset,validBankAccount,snapshot,migrate,exportData,merge,csv,INSTRUMENT_COLUMNS,instrumentCSV,readInstrumentCSV};
 })(engineRoot);
 
 // These exports retain Android's integer-paisa arithmetic and interchange format.
@@ -179,7 +190,7 @@ export const CurrencyOptions = [
 export const today = () => FDR.iso(new Date());
 export const isSelf = asset => asset.ownership !== 'others';
 export const compareName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'en', {numeric: true, sensitivity: 'base'});
-export const emptyState = () => ({version: 2, assets: [], paid: {}, dark: false, currency: 'BDT', numberFormat: 'south-asian', defaultDepositView: 'card'});
+export const emptyState = () => ({version: 2, assets: [], paid: {}, bankAccounts: [], dark: false, currency: 'BDT', numberFormat: 'south-asian', defaultDepositView: 'card'});
 export function formatMoney(paisa, state = emptyState()) {
   const code = state.currency || 'BDT';
   const symbol = CurrencyOptions.find(row => row[0] === code)?.[2] || code + ' ';
@@ -360,6 +371,20 @@ export function upsertAsset(state, asset) {
 }
 export function deleteAsset(state, id) {
   return {...state, assets: state.assets.filter(asset => asset.id !== id), paid: Object.fromEntries(Object.entries(state.paid).filter(([key]) => key.split(':')[0] !== id))};
+}
+export function upsertBankAccount(state, account) {
+  const saved = {...account};
+  if (!saved.id) saved.id = 'bank' + (globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2));
+  if (!Transfer.validBankAccount(saved)) throw Error('Choose a bank and complete the account title, account number, branch name and routing number.');
+  const accounts = state.bankAccounts || [], exists = accounts.some(value => value.id === saved.id);
+  if (!exists && accounts.length >= 500) throw Error('The maximum is 500 bank accounts. Export or remove an account first.');
+  return {...state, bankAccounts: exists ? accounts.map(value => value.id === saved.id ? saved : value) : [...accounts, saved]};
+}
+export function deleteBankAccount(state, id) {
+  return {...state, bankAccounts: (state.bankAccounts || []).filter(account => account.id !== id)};
+}
+export function bankAccountText(account) {
+  return `Account Title: ${account.accountTitle}\nBank Name: ${account.bankName}\nBranch Name: ${account.branchName}\nAccount Number: ${account.accountNumber}\nRouting Number: ${account.routingNumber}`;
 }
 export function recordPayment(state, id, receipt) {
   const event = eventById(state, id);

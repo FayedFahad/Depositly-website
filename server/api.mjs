@@ -55,6 +55,10 @@ function configured(config) { if (!config.configured) throw new ApiError(503, 'A
 function requestMethod(request, expected) { if (request.method !== expected) throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'This request method is not allowed.'); }
 function safeGoogleCode(value) { return typeof value === 'string' && /^[a-z][a-z0-9_]{0,79}$/.test(value) ? value : ''; }
 function safeString(value, max) { return typeof value === 'string' ? value.slice(0, max) : ''; }
+function safeReturnTo(value) {
+  const route=value==='/#overview'?'/#dashboard':value;
+  return typeof route==='string'&&/^\/#(?:dashboard|deposits|bank-information|calendar|payments|backup|settings)$/.test(route)?route:'/#dashboard';
+}
 function publicUser(user) { return {sub: user.sub, email: user.email, name: user.name, given_name: user.given_name || '', picture: user.picture || ''}; }
 function scopeGranted(scope) { return typeof scope === 'string' && scope.split(/\s+/).includes(DRIVE_SCOPE); }
 function requireOrigin(request, config) {
@@ -95,7 +99,7 @@ function validateBackup(backup) {
   if (!backup || backup.format !== 'depositly-google-drive' || backup.version !== 1 || backup.data?.scope !== 'all') throw new ApiError(400, 'INVALID_BACKUP', 'Choose a complete Depositly Google Drive backup.');
   if (Buffer.byteLength(JSON.stringify(backup)) > MAX_BACKUP) throw new ApiError(413, 'BACKUP_TOO_LARGE', 'This backup exceeds the 20 MB safety limit. Use a full JSON file backup.');
   try { return normalizeBackup(backup).data; }
-  catch { throw new ApiError(400, 'INVALID_BACKUP', 'The backup contains unsupported or invalid investment records. Update Depositly or use a valid file backup.'); }
+  catch { throw new ApiError(400, 'INVALID_BACKUP', 'The backup contains unsupported or invalid records. Update Depositly or use a valid file backup.'); }
 }
 
 export function createApiHandler({env = process.env, fetchImpl = globalThis.fetch, now = Date.now} = {}) {
@@ -192,7 +196,8 @@ export function createApiHandler({env = process.env, fetchImpl = globalThis.fetc
       if (group === 'auth' && action === 'start') {
         requestMethod(request, 'GET'); configured(config);
         const state = randomToken(), verifier = randomToken(), binding = randomToken();
-        const transaction = {state, verifier, binding, expiresAt: now() + TRANSACTION_SECONDS * 1000};
+        const returnTo=safeReturnTo(new URL(request.url,config.origin).searchParams.get('returnTo'));
+        const transaction = {state, verifier, binding, returnTo, expiresAt: now() + TRANSACTION_SECONDS * 1000};
         writeBinding(response, config, binding);
         appendCookies(response, [serializeCookie(cookieNames(config.secure).transaction, encryptCookie(transaction, 'transaction', config.sessionSecret), {secure: config.secure, maxAge: TRANSACTION_SECONDS})]);
         const target = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -221,7 +226,7 @@ export function createApiHandler({env = process.env, fetchImpl = globalThis.fetc
           const session = {version: 1, user, binding: transaction.binding, csrfToken: randomToken(), accessToken: tokens.value.access_token, refreshToken: tokens.value.refresh_token, accessExpiresAt: now() + Number(tokens.value.expires_in) * 1000, createdAt: now(), expiresAt: now() + SESSION_SECONDS * 1000};
           if (Number(tokens.value.refresh_token_expires_in) > 0) session.refreshExpiresAt = now() + Number(tokens.value.refresh_token_expires_in) * 1000;
           writeSession(response, config, session);
-          return redirect(response, `${config.origin}/#dashboard`);
+          return redirect(response, `${config.origin}${safeReturnTo(transaction.returnTo)}`);
         } catch (error) {
           // An unsolicited callback must not become a cross-site sign-out action.
           if (validTransaction) clearSession(response, config);

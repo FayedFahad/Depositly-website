@@ -21,6 +21,7 @@ Users enter records in the browser or transfer Android-compatible backups throug
 ## Capabilities and Constraints
 
 - Preserve deposits, receipts, calendar, exports, import review, account isolation, and preferences.
+- Bank information supports an offline bank dropdown and logos, account title, account number, branch, routing number, optional free-text account type, editing/deletion, and text sharing. Full JSON and Google backups share these records with Android; deposit-only imports preserve them.
 - Preserve the Android calculations, including the 360-day interest year and TDS.
 - Preserve the Vercel Node API and same-origin Google authentication. Do not substitute static-only hosting.
 - A connected Google account uses one shared registry. Saved edits synchronize quietly, including offline retries, without backup review prompts. Keep dated versions available for explicit restore. Background timing remains subject to connectivity and OS scheduling.

@@ -1,0 +1,30 @@
+.bank-information-heading { align-items: flex-start; }
+.bank-information-heading p { margin-top: 9px; }
+.bank-account-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 24px; }
+.bank-account-card { min-width: 0; display: flex; flex-direction: column; }
+.bank-account-head { display: flex; align-items: center; gap: 14px; padding-bottom: 22px; }
+.bank-account-head > div { min-width: 0; }
+.bank-account-head h2 { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.bank-account-head p { margin-top: 4px; color: var(--ink-secondary); overflow-wrap: anywhere; }
+.bank-account-details { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+.bank-account-details > div { min-width: 0; }
+.bank-account-details dt { font-size: 12px; color: var(--muted); }
+.bank-account-details dd { margin: 5px 0 0; color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.bank-account-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 26px; }
+.bank-account-actions .btn { flex: 1; min-height: 44px; padding-inline: 12px; }
+.bank-account-actions svg { width: 17px; height: 17px; }
+.bank-account-empty .empty { padding: 48px 20px; }
+.bank-account-empty .button-row { justify-content: center; margin-top: 24px; }
+.account-bank-select { display: flex; align-items: center; gap: 12px; }
+.account-bank-select .bank-mark { flex-shrink: 0; width: 50px; height: 50px; }
+.account-bank-select select { flex: 1; min-width: 0; }
+.bank-account-form-note { margin-bottom: 22px; }
+.bank-share-field { margin-top: 22px; }
+.bank-share-field textarea { min-height: 220px; line-height: 1.8; font-variant-numeric: tabular-nums; }
+.bank-backup-caption { margin: 0 0 18px; font-size: 12px; }
+@media (max-width: 600px) {
+  .bank-information-heading .btn { align-self: flex-start; }
+  .bank-account-grid { gap: 16px; }
+  .bank-account-head { gap: 12px; }
+  .bank-account-details { gap: 18px 14px; }
+}

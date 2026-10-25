@@ -2,6 +2,8 @@
 
 A responsive companion for Depositly Android: deposits, National Savings Certificates, payment schedules, receipts, ownership, and preferences. Google sign-in opens your personal tracker workspace and the same private Google Drive backups as the phone app. It does not create a bank account or a separate financial database.
 
+Open **Bank information** in the sidebar (or mobile navigation menu) to add, edit or delete saved bank accounts. Choose a bank from the offline catalog, enter the account title, account number, branch and routing number, and optionally enter an account type. Cards show the bank logo and include **Share**; browsers without system sharing offer the same five-line text with **Copy details**. Account and routing numbers stay as text to preserve leading zeros. These records use the active account’s workspace and synchronize with the Android app through full JSON and Google backups. Deposit CSV files and selected-deposit JSON exports exclude bank information; replacing from those files preserves saved bank accounts. Import the phone’s bank-only backup using **Merge records** to retain existing deposits and receipts.
+
 The website uses static frontend assets plus Node.js API functions on Vercel. Google OAuth credentials and tokens are handled by the server and are not exposed to page JavaScript. A persistent encrypted, HttpOnly session cookie carries the opaque session needed to restore your connection after reopening the page. Local browser copies are separated by Google account; shared phone and web records synchronize through immutable Google Drive versions.
 
 ## Configure Google and Vercel
