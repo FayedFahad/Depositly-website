@@ -18,24 +18,25 @@ const dataAttributes=tag=>Object.fromEntries([...String(tag||'').matchAll(/\bdat
 const decodeHTML=value=>value.replace(/&(amp|lt|gt|quot|#39);/g,(_,entity)=>({amp:'&',lt:'<',gt:'>',quot:'"','#39':"'"}[entity]));
 
 /** Exercise the real app entry point without a browser, account credentials or network. */
-async function boot(context,{banks=[],guest=false}={}){
+async function boot(context,{banks=[],guest=false,view}={}){
  const originals=new Map(),nodes=new Map(),documentListeners=new Map(),windowListeners=new Map(),renders=[];
  const replace=(name,value)=>{originals.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value});};
  const register=(map,type,callback)=>{if(!map.has(type))map.set(type,[]);map.get(type).push(callback);};
  const classList=()=>({add(){},remove(){},toggle(){},contains:()=>false});
  const node=id=>{
   if(!nodes.has(id)){let html='';nodes.set(id,{id,open:false,hidden:false,value:'',textContent:'',dataset:{},classList:classList(),style:{},disabled:false,
-   get innerHTML(){return html;},set innerHTML(value){html=value;if(id==='app')renders.push(value);if(id==='modal')for(const [,fieldId,text] of value.matchAll(/<textarea\b[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/textarea>/g))node(fieldId).value=decodeHTML(text);},
+   get innerHTML(){return html;},set innerHTML(value){html=value;if(id==='app')renders.push(value);if(id==='modal'){for(const [,fieldId,text] of value.matchAll(/<textarea\b[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/textarea>/g))node(fieldId).value=decodeHTML(text);for(const [,fieldId,text] of value.matchAll(/<input\b[^>]*id="([^"]+)"[^>]*value="([^"]*)"[^>]*>/g))node(fieldId).value=decodeHTML(text);const form=value.match(/<form\b[^>]*id="bank-account-form"[^>]*>/)?.[0];if(form)node('bank-account-form').dataset=dataAttributes(form);}},
    addEventListener(){},setAttribute(name,value){this[name]=value;},focus(){},click(){},select(){},querySelector:selector=>node(selector),
    close(){this.open=false;},showModal(){this.open=true;},getBoundingClientRect:()=>({left:0,right:100,top:0,bottom:100})});}
   return nodes.get(id);
  };
- const makeWorkspace=(user,name,accounts)=>({data:{...emptyState(),assets:[{...deposit,id:user.sub,name}],bankAccounts:accounts},owner:user.sub,dirty:true,reminders:{enabled:false,time:'09:00'},updatedAt:'2026-10-25T00:00:00Z'});
+ const makeWorkspace=(user,name,accounts)=>({data:{...emptyState(),assets:[{...deposit,id:user.sub,name}],bankAccounts:accounts,...(user.sub===alice.sub&&view?{bankInformationView:view}:{})},owner:user.sub,dirty:true,reminders:{enabled:false,time:'09:00'},updatedAt:'2026-10-25T00:00:00Z'});
  const values=new Map([[accountWorkspaceKey(alice),JSON.stringify(makeWorkspace(alice,'ALICE_PRIVATE_DEPOSIT',banks))],[accountWorkspaceKey(bob),JSON.stringify(makeWorkspace(bob,'BOB_PRIVATE_DEPOSIT',[{...account,accountTitle:'Bob Example',accountNumber:'0000000000002'}]))]]);
  const server={user:guest?null:alice,saves:0,failWrites:false,shared:[],copied:[]};
  const storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>{if(server.failWrites&&key===accountWorkspaceKey(server.user))throw Error('Quota exceeded');values.set(key,value);},removeItem:key=>values.delete(key)};
  const session=user=>user?{authenticated:true,configured:true,user,csrfToken:'synthetic-bank-test-token',expiresAt:Date.now()+100000}:{authenticated:false,configured:true};
- replace('document',{hidden:false,body:{classList:classList(),dataset:{}},getElementById:node,querySelector:node,addEventListener:(type,callback)=>register(documentListeners,type,callback)});
+ let copyInput;
+ replace('document',{hidden:false,body:{classList:classList(),dataset:{},appendChild(){}},getElementById:node,querySelector:node,activeElement:node('active'),createElement:()=>copyInput={value:'',style:{},focus(){},select(){},remove(){}},execCommand:command=>{if(command!=='copy')return false;server.copied.push(copyInput.value);return true;},addEventListener:(type,callback)=>register(documentListeners,type,callback)});
  replace('window',{addEventListener:(type,callback)=>register(windowListeners,type,callback),scrollTo(){}});
  replace('localStorage',storage);
  replace('location',{origin:'https://depositly.example',pathname:'/',hash:'#dashboard',search:'',assign(){}});
@@ -148,4 +149,57 @@ test('a delayed failed share cannot reopen the previous account details after a 
  const app=await boot(context,{banks:[account]}),held=deferred();await app.click({nav:'bank-information'});navigator.share=()=>held.promise;
  const pending=app.click({action:'share-bank-account',id:account.id});await app.switchToBob();held.reject(Error('Share unavailable'));await pending;
  assert.equal(app.node('modal').open,false);assert.deepEqual(app.server.copied,[]);assert.doesNotMatch(app.node('app').innerHTML,/Alice Example|00123456789012345/);
+});
+
+test('bank grouping and card/list/grid selections persist without altering saved accounts',async context=>{
+ const legacy={...account,id:'legacy-bank',bankId:'',bankName:'AB BANK LIMITED',branchName:'Central branch'},city={...account,id:'city-bank',bankId:'city-bank-plc',bankName:'City Bank PLC'};
+ const app=await boot(context,{banks:[account,legacy,city]});await app.click({nav:'bank-information'});
+ const before=app.saved().bankAccounts;assert.equal([...app.node('app').innerHTML.matchAll(/data-bank-group=/g)].length,2);
+ for(const view of ['list','card','grid']){
+  await app.click({action:'bank-layout',value:view});assert.equal(app.saved().bankInformationView,view);assert.deepEqual(app.saved().bankAccounts,before);
+  await app.click({nav:'backup'});await app.click({nav:'bank-information'});
+  assert.match(app.node('app').innerHTML,new RegExp('id="bank-view-'+view+'"[^>]*aria-pressed="true"'));
+  assert.equal(Transfer.migrate(JSON.parse(JSON.stringify(Transfer.exportData(app.saved())))).bankInformationView,view);
+ }
+ await app.click({action:'bank-layout',value:'invalid'});assert.equal(app.saved().bankInformationView,'grid');
+ app.server.failWrites=true;await app.click({action:'bank-layout',value:'list'});assert.equal(app.saved().bankInformationView,'grid');assert.match(app.node('app').innerHTML,/id="bank-view-grid"[^>]*aria-pressed="true"/);app.server.failWrites=false;
+});
+
+test('copy icons preserve exact numbers in every view, forms and clipboard fallback',async context=>{
+ const app=await boot(context,{banks:[account]});await app.click({nav:'bank-information'});
+ for(const view of ['card','list','grid']){
+  await app.click({action:'bank-layout',value:view});
+  await app.click({action:'copy-bank-field',id:account.id,field:'accountNumber'});assert.equal(app.server.copied.at(-1),'00123456789012345');
+  await app.click({action:'copy-bank-field',id:account.id,field:'routingNumber'});assert.equal(app.server.copied.at(-1),'000123456');
+ }
+ const count=app.server.copied.length;await app.click({action:'copy-bank-field',id:account.id,field:'accountTitle'});assert.equal(app.server.copied.length,count);
+ navigator.clipboard.writeText=async()=>{throw Error('Clipboard unavailable');};
+ await app.click({action:'copy-bank-field',id:account.id,field:'accountNumber'});assert.equal(app.server.copied.at(-1),'00123456789012345');
+ await app.click({action:'bank-account-detail',id:account.id});await app.click({action:'edit-bank-account',id:account.id});
+ assert.match(app.node('modal').innerHTML,/data-action="copy-bank-form-field"/);
+ app.node('account-number').value='00000012345000';await app.click({action:'copy-bank-form-field',field:'accountNumber'});assert.equal(app.server.copied.at(-1),'00000012345000');
+ app.node('account-routing').value='000000001';await app.click({action:'copy-bank-form-field',field:'routingNumber'});assert.equal(app.server.copied.at(-1),'000000001');
+ assert.equal(app.saved().bankAccounts[0].accountNumber,account.accountNumber,'Copying unsaved input does not save it');
+});
+
+test('deposit-only imports preserve the bank layout and full backups restore a valid saved selection',async context=>{
+ const app=await boot(context,{banks:[account],view:'grid'});
+ await app.importFile(Transfer.instrumentCSV(app.saved()),'deposits.csv');await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'grid');
+ const selected=Transfer.exportData({...app.saved(),bankInformationView:'card'},[app.saved().assets[0].id]);await app.importFile(JSON.stringify(selected));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'grid');
+ await app.importFile(JSON.stringify(Transfer.exportData({...app.saved(),bankInformationView:'list'})));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'list');
+ for(const value of [undefined,'invalid']){const backup={...app.saved(),bankInformationView:value};await app.importFile(JSON.stringify(Transfer.exportData(backup)));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'list');}
+});
+
+test('old account copy and layout actions cannot affect a newly opened account',async context=>{
+ const app=await boot(context,{banks:[account],view:'grid'});await app.click({nav:'bank-information'});
+ const stale=['bank-layout','bank-account-detail','copy-bank-field'].map(action=>({...app.actionData(action,action==='bank-layout'?undefined:account.id),action,id:account.id,value:'list',field:'accountNumber'}));
+ await app.click({action:'bank-account-detail',id:account.id});await app.click({action:'edit-bank-account',id:account.id});stale.push({...app.actionData('copy-bank-form-field'),action:'copy-bank-form-field',field:'accountNumber'});
+ await app.switchToBob();for(const action of stale)await app.click(action);
+ assert.deepEqual(app.server.copied,[]);assert.equal(app.saved().bankInformationView,undefined);assert.equal(app.saved().bankAccounts[0].accountTitle,'Bob Example');assert.equal(app.node('modal').open,false);
+});
+
+test('a delayed clipboard failure does not copy the previous account through the fallback',async context=>{
+ const app=await boot(context,{banks:[account]}),held=deferred();await app.click({nav:'bank-information'});navigator.clipboard.writeText=()=>held.promise;
+ const pending=app.click({action:'copy-bank-field',id:account.id,field:'routingNumber'});await app.switchToBob();held.reject(Error('Clipboard unavailable'));await pending;
+ assert.deepEqual(app.server.copied,[]);assert.equal(app.node('modal').open,false);
 });
