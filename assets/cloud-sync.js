@@ -118,7 +118,7 @@ export function createCloudSync({validateData = value => value, onStatus = () =>
       ensure(current);
       if (!config?.configured) throw new CloudError('Persistent Google accounts need to be configured by the website owner.', 'ACCOUNT_SETUP_REQUIRED', {missing: config?.missing || [], redirectUri: config?.redirectUri});
       const route = returnTo === '/#overview' ? '/#dashboard' : returnTo;
-      const target = typeof route === 'string' && /^\/#(?:dashboard|deposits|bank-information|calendar|payments|forecast|backup|settings)$/.test(route) ? route : '/#dashboard';
+      const target = typeof route === 'string' && /^\/#(?:dashboard|deposits|bank-information|calendar|payments|backup|settings)$/.test(route) ? route : '/#dashboard';
       const url = `/api/auth/start?returnTo=${encodeURIComponent(target)}`;
       signal('signing-in');
       navigate(url);

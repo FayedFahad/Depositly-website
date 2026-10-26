@@ -64,7 +64,7 @@ Full JSON downloads use Android's investment export format and preserve Self and
 
 Calculations match the phone app: month cycles use months / 12 and day cycles use exact days / 360, with integer-paisa arithmetic and TDS. A 100-day FDR pays on its exact 100th day; calendar cycles retain their original day anchor across renewals. Simple interest pays separately. Compound FDRs add net interest to principal at renewal maturity, and pay accumulated principal plus final interest when renewal stops. Savings certificates return principal with final interest at maturity and do not renew. Legacy receipts retain their recorded values and reduce any remaining corrected term interest.
 
-Deposits include a Simple / Compound interest selector; bank selection leaves Investment Name for manual input. Forecast charts show projected net interest and the interest/TDS breakdown using current balances and rates. Compound backups require reader version 6 and round-trip between the updated website and phone app, including explicit tenure metadata. Older clients must update before reading compound backups.
+Deposits include a Simple / Compound interest selector; bank selection leaves Investment Name for manual input. Compound backups require reader version 6 and round-trip between the updated website and phone app, including explicit tenure metadata. Older clients must update before reading compound backups.
 
 Institution logos use 68 PNG assets extracted from the Android app, with metadata for all 69 catalog entries; Jubilee Bank and unknown institutions use a generic fallback.
 

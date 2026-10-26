@@ -24,7 +24,7 @@ Users enter records in the browser or transfer Android-compatible backups throug
 - Bank information supports an offline bank dropdown and logos, account title, account number, branch, routing number, optional free-text account type, editing/deletion, and text sharing. Full JSON and Google backups share these records with Android; deposit-only imports preserve them.
 - Group saved accounts by bank. Provide Cards and Grid layouts with a saved selection shared with Android, and exact-text copy controls beside account/routing numbers in records and forms. Bank Information titles use a capital I.
 - Match Android calculations: calendar cycles use months / 12, day cycles use exact days / 360, and TDS applies to interest. Compound deposits capitalize net interest only at renewal maturity; savings certificates never renew. Preserve receipts when repairing legacy schedules.
-- Forecast charts show net-interest projections and the interest/TDS breakdown. Bank selection leaves Investment Name for manual input.
+- Keep Forecast out of website navigation and Settings; old Forecast links return to Dashboard. Bank selection leaves Investment Name for manual input.
 - Deposits may optionally link to any saved receiving bank account independently of their issuing institution. Preserve immutable receiving-account identity on new receipts, keep legacy receipts unattributed, and prevent deleting a currently linked account until its deposits are reassigned or unlinked.
 - Marking payments received asks for amount and optional note; presentation and month filtering use scheduled payout dates. Keep historical stored receipt dates for backup compatibility.
 - Preserve the Vercel Node API and same-origin Google authentication. Do not substitute static-only hosting.

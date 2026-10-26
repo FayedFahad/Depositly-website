@@ -98,7 +98,7 @@ test('opening an old quarterly/100-day workspace persists corrected registry fie
  assert.equal(saved.data.assets[0].cycle,100);assert.equal(saved.data.assets[0].first,'2027-01-09');assert.equal(entries['a/account-a/cycle'].v,100);assert.equal(entries['a/account-a/cycleUnit'].v,'days');assert.equal(entries['a/account-a/first'].v,'2027-01-09');
  assert.equal(app.server.posted[0].backup.data.assets[0].cycle,100,'Drive receives the corrected schedule, not only the normalized screen');
  const stamp=entries['a/account-a/cycle'].s;await app.click('theme');const changed=JSON.parse(app.storage.getItem(accountWorkspaceKey(alice)));assert.deepEqual(changed.syncDocument.entries['a/account-a/cycle'].s,stamp,'A later preference edit does not repeat the finance migration');
- await app.click({nav:'forecast'});assert.match(app.node('app').innerHTML,/Net interest over time/);assert.doesNotMatch(app.node('app').innerHTML,/By investment/);
+ assert.doesNotMatch(app.node('app').innerHTML,/data-nav="forecast"/);await app.click({nav:'forecast'});assert.doesNotMatch(app.node('app').innerHTML,/Net interest over time|Open forecast/);
 });
 test('failed finance migration preserves durable data and retries from the original registry baseline',async context=>{
  const app=await boot(context,{asset:wrongHundred,rawRegistry:true,failWrites:true,allowNoSync:true});

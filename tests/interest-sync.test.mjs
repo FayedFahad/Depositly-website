@@ -116,9 +116,9 @@ test('authenticated reader7 writes retain bank links and reject malformed routin
  const badHistory=copy(historical);badHistory.sync.entries['r/'+receiptId+'/snapshot'].v.bankAccountSnapshot.accountNumber='bad\nnumber';assert.equal((await api.save(badHistory)).statusCode,400);
 });
 
-test('forecast sign-in returns to its exact local route while unsafe variants fall back to Dashboard',async()=>{
+test('retired forecast sign-in routes fall back to Dashboard',async()=>{
  const api=apiHarness();
- for(const [returnTo,expected] of [['/#forecast','/#forecast'],['/#forecast?next=https://other.example','/#dashboard'],['https://other.example/#forecast','/#dashboard']]){
+ for(const [returnTo,expected] of [['/#forecast','/#dashboard'],['/#forecast?next=https://other.example','/#dashboard'],['https://other.example/#forecast','/#dashboard']]){
   let target;const cloud=createCloudSync({navigate:url=>target=new URL(url,api.origin),fetchImpl:async()=>new Response(JSON.stringify({configured:true}))});await cloud.connect({returnTo});assert.equal(target.searchParams.get('returnTo'),expected);
   const started=responseRecorder();await api.handler({url:'/api/auth/start?'+new URLSearchParams({returnTo}),method:'GET',headers:{}},started);assert.equal(started.statusCode,302);
   const authorization=new URL(started.getHeader('Location')),cookie=started.getHeader('Set-Cookie').map(value=>value.split(';')[0]).join('; '),callback=responseRecorder();
