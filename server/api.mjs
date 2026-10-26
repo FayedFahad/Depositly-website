@@ -57,7 +57,7 @@ function safeGoogleCode(value) { return typeof value === 'string' && /^[a-z][a-z
 function safeString(value, max) { return typeof value === 'string' ? value.slice(0, max) : ''; }
 function safeReturnTo(value) {
   const route=value==='/#overview'?'/#dashboard':value;
-  return typeof route==='string'&&/^\/#(?:dashboard|deposits|bank-information|calendar|payments|backup|settings)$/.test(route)?route:'/#dashboard';
+  return typeof route==='string'&&/^\/#(?:dashboard|deposits|bank-information|calendar|payments|forecast|backup|settings)$/.test(route)?route:'/#dashboard';
 }
 function publicUser(user) { return {sub: user.sub, email: user.email, name: user.name, given_name: user.given_name || '', picture: user.picture || ''}; }
 function scopeGranted(scope) { return typeof scope === 'string' && scope.split(/\s+/).includes(DRIVE_SCOPE); }

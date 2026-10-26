@@ -1,0 +1,1259 @@
+{
+  "base": {
+    "format": "depositly-google-drive",
+    "version": 1,
+    "data": {
+      "scope": "all",
+      "version": 1,
+      "assets": [
+        {
+          "id": "a",
+          "name": "A",
+          "principal": 1000000
+        }
+      ],
+      "paid": {
+        "a:2026-01-01": {
+          "amount": 1000,
+          "notes": "Receipt"
+        }
+      }
+    },
+    "notificationSettings": {
+      "enabled": false,
+      "time": "09:00"
+    }
+  },
+  "one": {
+    "format": "depositly-google-drive",
+    "version": 1,
+    "data": {
+      "scope": "all",
+      "version": 1,
+      "assets": [
+        {
+          "id": "a",
+          "name": "Website",
+          "principal": 1000000
+        }
+      ],
+      "paid": {
+        "a:2026-01-01": {
+          "amount": 1000,
+          "notes": "Receipt"
+        }
+      }
+    },
+    "notificationSettings": {
+      "enabled": false,
+      "time": "09:00"
+    }
+  },
+  "two": {
+    "format": "depositly-google-drive",
+    "version": 1,
+    "data": {
+      "scope": "all",
+      "version": 1,
+      "assets": [
+        {
+          "id": "a",
+          "name": "A",
+          "principal": 2000000
+        }
+      ],
+      "paid": {
+        "a:2026-01-01": {
+          "amount": 1000,
+          "notes": "Receipt"
+        }
+      }
+    },
+    "notificationSettings": {
+      "enabled": false,
+      "time": "09:00"
+    }
+  },
+  "initial": {
+    "version": 1,
+    "entries": {
+      "p/scope": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "all"
+      },
+      "p/version": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1
+      },
+      "n/enabled": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": false
+      },
+      "n/time": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "09:00"
+      },
+      "a/a": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "a/a/id": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "a"
+      },
+      "a/a/name": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "A"
+      },
+      "a/a/principal": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1000000
+      },
+      "r/a:2026-01-01": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "r/a:2026-01-01/amount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1000
+      },
+      "r/a:2026-01-01/notes": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "Receipt"
+      },
+      "a/a/type": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/interestType": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycle": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycleUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/start": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/first": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/maturity": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/autoRenew": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/renewalStop": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureCount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownership": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownerName": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      }
+    }
+  },
+  "web": {
+    "version": 1,
+    "entries": {
+      "p/scope": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "all"
+      },
+      "p/version": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1
+      },
+      "n/enabled": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": false
+      },
+      "n/time": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "09:00"
+      },
+      "a/a": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "a/a/id": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "a"
+      },
+      "a/a/name": {
+        "s": [
+          20,
+          0,
+          "web"
+        ],
+        "v": "Website"
+      },
+      "a/a/principal": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1000000
+      },
+      "r/a:2026-01-01": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "r/a:2026-01-01/amount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1000
+      },
+      "r/a:2026-01-01/notes": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "Receipt"
+      },
+      "a/a/type": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/interestType": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycle": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycleUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/start": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/first": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/maturity": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/autoRenew": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/renewalStop": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureCount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownership": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownerName": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      }
+    }
+  },
+  "phone": {
+    "version": 1,
+    "entries": {
+      "p/scope": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "all"
+      },
+      "p/version": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1
+      },
+      "n/enabled": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": false
+      },
+      "n/time": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "09:00"
+      },
+      "a/a": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "a/a/id": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "a"
+      },
+      "a/a/name": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "A"
+      },
+      "a/a/principal": {
+        "s": [
+          20,
+          0,
+          "phone"
+        ],
+        "v": 2000000
+      },
+      "r/a:2026-01-01": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "r/a:2026-01-01/amount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1000
+      },
+      "r/a:2026-01-01/notes": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "Receipt"
+      },
+      "a/a/type": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/interestType": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycle": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycleUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/start": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/first": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/maturity": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/autoRenew": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/renewalStop": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureCount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownership": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownerName": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      }
+    }
+  },
+  "merged": {
+    "version": 1,
+    "entries": {
+      "p/scope": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "all"
+      },
+      "p/version": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1
+      },
+      "n/enabled": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": false
+      },
+      "n/time": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "09:00"
+      },
+      "a/a": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "a/a/id": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "a"
+      },
+      "a/a/name": {
+        "s": [
+          20,
+          0,
+          "web"
+        ],
+        "v": "Website"
+      },
+      "a/a/principal": {
+        "s": [
+          20,
+          0,
+          "phone"
+        ],
+        "v": 2000000
+      },
+      "r/a:2026-01-01": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": true
+      },
+      "r/a:2026-01-01/amount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1000
+      },
+      "r/a:2026-01-01/notes": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "Receipt"
+      },
+      "a/a/type": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/interestType": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycle": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycleUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/start": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/first": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/maturity": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/autoRenew": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/renewalStop": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureCount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownership": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownerName": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      }
+    }
+  },
+  "deleted": {
+    "version": 1,
+    "entries": {
+      "p/scope": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "all"
+      },
+      "p/version": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1
+      },
+      "n/enabled": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": false
+      },
+      "n/time": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "09:00"
+      },
+      "a/a": {
+        "s": [
+          21,
+          0,
+          "delete"
+        ],
+        "v": false
+      },
+      "a/a/id": {
+        "s": [
+          21,
+          0,
+          "delete"
+        ],
+        "d": true
+      },
+      "a/a/name": {
+        "s": [
+          21,
+          0,
+          "delete"
+        ],
+        "d": true
+      },
+      "a/a/principal": {
+        "s": [
+          21,
+          0,
+          "delete"
+        ],
+        "d": true
+      },
+      "r/a:2026-01-01": {
+        "s": [
+          21,
+          0,
+          "delete"
+        ],
+        "v": false
+      },
+      "r/a:2026-01-01/amount": {
+        "s": [
+          21,
+          0,
+          "delete"
+        ],
+        "d": true
+      },
+      "r/a:2026-01-01/notes": {
+        "s": [
+          21,
+          0,
+          "delete"
+        ],
+        "d": true
+      },
+      "a/a/type": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/interestType": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycle": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycleUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/start": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/first": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/maturity": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/autoRenew": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/renewalStop": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureCount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownership": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownerName": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      }
+    }
+  },
+  "restored": {
+    "version": 1,
+    "entries": {
+      "p/scope": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "all"
+      },
+      "p/version": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": 1
+      },
+      "n/enabled": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": false
+      },
+      "n/time": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "v": "09:00"
+      },
+      "a/a": {
+        "s": [
+          22,
+          0,
+          "restore"
+        ],
+        "v": true
+      },
+      "a/a/id": {
+        "s": [
+          22,
+          0,
+          "restore"
+        ],
+        "v": "a"
+      },
+      "a/a/name": {
+        "s": [
+          22,
+          0,
+          "restore"
+        ],
+        "v": "A"
+      },
+      "a/a/principal": {
+        "s": [
+          22,
+          0,
+          "restore"
+        ],
+        "v": 1000000
+      },
+      "r/a:2026-01-01": {
+        "s": [
+          22,
+          0,
+          "restore"
+        ],
+        "v": true
+      },
+      "r/a:2026-01-01/amount": {
+        "s": [
+          22,
+          0,
+          "restore"
+        ],
+        "v": 1000
+      },
+      "r/a:2026-01-01/notes": {
+        "s": [
+          22,
+          0,
+          "restore"
+        ],
+        "v": "Receipt"
+      },
+      "a/a/type": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/interestType": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycle": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/cycleUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/start": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/first": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/maturity": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/autoRenew": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/renewalStop": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureCount": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/tenureUnit": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownership": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      },
+      "a/a/ownerName": {
+        "s": [
+          1,
+          0,
+          "seed"
+        ],
+        "d": true
+      }
+    }
+  }
+}

@@ -8,7 +8,7 @@ import {observabilityBuildOptions} from '../scripts/observability.mjs';
 
 const origin='https://depositly.example';
 test('telemetry uses fixed page names and strips queries, tokens and arbitrary fragments',()=>{
- for(const section of ['dashboard','deposits','calendar','payments','backup','settings'])assert.equal(telemetryRoute(new URL(origin+'/?code=private#'+section)),'/'+section);
+ for(const section of ['dashboard','deposits','bank-information','forecast','calendar','payments','backup','settings'])assert.equal(telemetryRoute(new URL(origin+'/?code=private#'+section)),'/'+section);
  for(const path of ['/privacy','/privacy/','/privacy/index.html'])assert.equal(telemetryRoute(new URL(origin+path)),'/privacy/');
  assert.equal(telemetryRoute(new URL(origin+'/#person@example.com')),'/dashboard');
  assert.deepEqual(cleanTelemetry({type:'pageview',url:origin+'/?code=private&email=private#deposits'},origin),{type:'pageview',url:origin+'/deposits'});

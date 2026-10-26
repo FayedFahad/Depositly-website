@@ -1,6 +1,6 @@
 import {BankCatalog,compareName} from './data-engine.js';
 
-export const bankInformationView=state=>['card','list','grid'].includes(state.bankInformationView)?state.bankInformationView:'card';
+export const bankInformationView=state=>['card','grid'].includes(state.bankInformationView)?state.bankInformationView:'card';
 const normalized=value=>String(value||'').toLocaleLowerCase('en').replace(/[.,'’]/g,'').replace(/&/g,' and ').replace(/\b(?:the|plc|ltd|limited)\b/g,'').replace(/[\s_-]+/g,' ').trim();
 const banksById=new Map(BankCatalog.map(bank=>[bank.id,bank])),banksByName=new Map();
 for(const bank of BankCatalog)for(const name of [bank.name,...(bank.aliases||[])])banksByName.set(normalized(name),bank);

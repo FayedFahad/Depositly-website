@@ -18,8 +18,8 @@ test('unknown banks group by normalized names and sort alphabetically with stabl
  const groups=groupedBankAccounts(rows);assert.equal(groups.length,2);assert.match(groups[0].name,/Example/i);assert.deepEqual(groups[0].accounts.map(a=>a.id),['central','north']);assert.equal(groups[1].name,'Zed Bank');
 });
 test('bank view preferences have safe defaults and survive full and cloud backup round trips',()=>{
- for(const value of [undefined,null,'invalid',{},0])assert.equal(bankInformationView({bankInformationView:value}),'card');
- for(const view of ['card','list','grid']){
+ for(const value of [undefined,null,'invalid','list',{},0])assert.equal(bankInformationView({bankInformationView:value}),'card');
+ for(const view of ['card','grid']){
   const state={...emptyState(),bankAccounts:[sample],bankInformationView:view};
   assert.equal(bankInformationView(state),view);
   assert.equal(Transfer.migrate(JSON.parse(JSON.stringify(Transfer.exportData(state)))).bankInformationView,view);

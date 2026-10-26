@@ -18,7 +18,7 @@ const dataAttributes=tag=>Object.fromEntries([...String(tag||'').matchAll(/\bdat
 const decodeHTML=value=>value.replace(/&(amp|lt|gt|quot|#39);/g,(_,entity)=>({amp:'&',lt:'<',gt:'>',quot:'"','#39':"'"}[entity]));
 
 /** Exercise the real app entry point without a browser, account credentials or network. */
-async function boot(context,{banks=[],guest=false,view}={}){
+async function boot(context,{banks=[],guest=false,view,assets,paid={}}={}){
  const originals=new Map(),nodes=new Map(),documentListeners=new Map(),windowListeners=new Map(),renders=[];
  const replace=(name,value)=>{originals.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value});};
  const register=(map,type,callback)=>{if(!map.has(type))map.set(type,[]);map.get(type).push(callback);};
@@ -30,7 +30,7 @@ async function boot(context,{banks=[],guest=false,view}={}){
    close(){this.open=false;},showModal(){this.open=true;},getBoundingClientRect:()=>({left:0,right:100,top:0,bottom:100})});}
   return nodes.get(id);
  };
- const makeWorkspace=(user,name,accounts)=>({data:{...emptyState(),assets:[{...deposit,id:user.sub,name}],bankAccounts:accounts,...(user.sub===alice.sub&&view?{bankInformationView:view}:{})},owner:user.sub,dirty:true,reminders:{enabled:false,time:'09:00'},updatedAt:'2026-10-25T00:00:00Z'});
+ const makeWorkspace=(user,name,accounts)=>({data:{...emptyState(),assets:user.sub===alice.sub&&assets?assets:[{...deposit,id:user.sub,name}],paid:user.sub===alice.sub?paid:{},bankAccounts:accounts,...(user.sub===alice.sub&&view?{bankInformationView:view}:{})},owner:user.sub,dirty:true,reminders:{enabled:false,time:'09:00'},updatedAt:'2026-10-25T00:00:00Z'});
  const values=new Map([[accountWorkspaceKey(alice),JSON.stringify(makeWorkspace(alice,'ALICE_PRIVATE_DEPOSIT',banks))],[accountWorkspaceKey(bob),JSON.stringify(makeWorkspace(bob,'BOB_PRIVATE_DEPOSIT',[{...account,accountTitle:'Bob Example',accountNumber:'0000000000002'}]))]]);
  const server={user:guest?null:alice,saves:0,failWrites:false,shared:[],copied:[]};
  const storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>{if(server.failWrites&&key===accountWorkspaceKey(server.user))throw Error('Quota exceeded');values.set(key,value);},removeItem:key=>values.delete(key)};
@@ -76,14 +76,16 @@ async function boot(context,{banks=[],guest=false,view}={}){
  const saved=(user=server.user)=>JSON.parse(storage.getItem(user?accountWorkspaceKey(user):`${ACCOUNT_WORKSPACE_PREFIX}.guest`)).data;
  const importFile=(text,name='banks.json')=>dispatch('change',{target:{id:'file-import',value:name,files:[{name,size:text.length,text:async()=>text}]}});
  const switchToBob=async()=>{server.user=bob;windowEvent('storage',{key:AUTH_EVENT_KEY});await until(()=>node('app').innerHTML.includes('Bob Example')&&node('app').innerHTML.includes('aria-busy="false"'),'verified Bob workspace opens');await nextTurn();};
- return {node,server,storage,renders,click,dispatch,windowEvent,form,submit,saved,importFile,switchToBob,actionData};
+ const makeForm=(id,values)=>({id,dataset:dataAttributes(node('modal').innerHTML.match(new RegExp('<form\\b[^>]*id="'+id+'"[^>]*>'))?.[0]),values});
+ const submitForm=(id,values)=>dispatch('submit',{target:makeForm(id,values),preventDefault(){}});
+ return {node,server,storage,renders,click,dispatch,windowEvent,form,submit,saved,importFile,switchToBob,actionData,makeForm,submitForm};
 }
 
 test('bank navigation, required dropdown fields, optional type and leading-zero CRUD use the account workspace',async context=>{
  const app=await boot(context);
  assert.match(app.node('app').innerHTML,/data-nav="bank-information"/);
  await app.click({nav:'bank-information'});
- assert.match(app.node('app').innerHTML,/<h1>Bank information<\/h1>/);
+ assert.match(app.node('app').innerHTML,/<h1>Bank Information<\/h1>/);
  await app.click('add-bank-account');
  const html=app.node('modal').innerHTML;
  const bankSelect=html.match(/<select\b[^>]*name="bankId"[^>]*>/)?.[0];assert(bankSelect);assert.match(bankSelect,/\brequired\b/);assert.match(html,/AB Bank PLC/);
@@ -151,23 +153,23 @@ test('a delayed failed share cannot reopen the previous account details after a 
  assert.equal(app.node('modal').open,false);assert.deepEqual(app.server.copied,[]);assert.doesNotMatch(app.node('app').innerHTML,/Alice Example|00123456789012345/);
 });
 
-test('bank grouping and card/list/grid selections persist without altering saved accounts',async context=>{
+test('bank grouping and card/grid selections persist without altering saved accounts',async context=>{
  const legacy={...account,id:'legacy-bank',bankId:'',bankName:'AB BANK LIMITED',branchName:'Central branch'},city={...account,id:'city-bank',bankId:'city-bank-plc',bankName:'City Bank PLC'};
  const app=await boot(context,{banks:[account,legacy,city]});await app.click({nav:'bank-information'});
  const before=app.saved().bankAccounts;assert.equal([...app.node('app').innerHTML.matchAll(/data-bank-group=/g)].length,2);
- for(const view of ['list','card','grid']){
+ for(const view of ['grid','card','grid']){
   await app.click({action:'bank-layout',value:view});assert.equal(app.saved().bankInformationView,view);assert.deepEqual(app.saved().bankAccounts,before);
   await app.click({nav:'backup'});await app.click({nav:'bank-information'});
   assert.match(app.node('app').innerHTML,new RegExp('id="bank-view-'+view+'"[^>]*aria-pressed="true"'));
   assert.equal(Transfer.migrate(JSON.parse(JSON.stringify(Transfer.exportData(app.saved())))).bankInformationView,view);
  }
  await app.click({action:'bank-layout',value:'invalid'});assert.equal(app.saved().bankInformationView,'grid');
- app.server.failWrites=true;await app.click({action:'bank-layout',value:'list'});assert.equal(app.saved().bankInformationView,'grid');assert.match(app.node('app').innerHTML,/id="bank-view-grid"[^>]*aria-pressed="true"/);app.server.failWrites=false;
+ app.server.failWrites=true;await app.click({action:'bank-layout',value:'card'});assert.equal(app.saved().bankInformationView,'grid');assert.match(app.node('app').innerHTML,/id="bank-view-grid"[^>]*aria-pressed="true"/);app.server.failWrites=false;
 });
 
 test('copy icons preserve exact numbers in every view, forms and clipboard fallback',async context=>{
  const app=await boot(context,{banks:[account]});await app.click({nav:'bank-information'});
- for(const view of ['card','list','grid']){
+ for(const view of ['card','grid']){
   await app.click({action:'bank-layout',value:view});
   await app.click({action:'copy-bank-field',id:account.id,field:'accountNumber'});assert.equal(app.server.copied.at(-1),'00123456789012345');
   await app.click({action:'copy-bank-field',id:account.id,field:'routingNumber'});assert.equal(app.server.copied.at(-1),'000123456');
@@ -186,8 +188,8 @@ test('deposit-only imports preserve the bank layout and full backups restore a v
  const app=await boot(context,{banks:[account],view:'grid'});
  await app.importFile(Transfer.instrumentCSV(app.saved()),'deposits.csv');await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'grid');
  const selected=Transfer.exportData({...app.saved(),bankInformationView:'card'},[app.saved().assets[0].id]);await app.importFile(JSON.stringify(selected));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'grid');
- await app.importFile(JSON.stringify(Transfer.exportData({...app.saved(),bankInformationView:'list'})));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'list');
- for(const value of [undefined,'invalid']){const backup={...app.saved(),bankInformationView:value};await app.importFile(JSON.stringify(Transfer.exportData(backup)));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'list');}
+ await app.importFile(JSON.stringify(Transfer.exportData({...app.saved(),bankInformationView:'card'})));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'card');
+ for(const value of [undefined,'invalid','list']){const backup={...app.saved(),bankInformationView:value};await app.importFile(JSON.stringify(Transfer.exportData(backup)));await app.click({action:'apply-import',mode:'replace'});assert.equal(app.saved().bankInformationView,'card');}
 });
 
 test('old account copy and layout actions cannot affect a newly opened account',async context=>{
@@ -202,4 +204,49 @@ test('a delayed clipboard failure does not copy the previous account through the
  const app=await boot(context,{banks:[account]}),held=deferred();await app.click({nav:'bank-information'});navigator.clipboard.writeText=()=>held.promise;
  const pending=app.click({action:'copy-bank-field',id:account.id,field:'routingNumber'});await app.switchToBob();held.reject(Error('Clipboard unavailable'));await pending;
  assert.deepEqual(app.server.copied,[]);assert.equal(app.node('modal').open,false);
+});
+
+const depositValues=extra=>({name:'ALICE_PRIVATE_DEPOSIT',type:'FDR',interestType:'simple',ownership:'self',ownerName:'Alice Example',bankName:'AB Bank PLC',reference:'00123',principal:'10000',rate:'10',tds:'10',cycle:'1',cycleUnit:'months',start:'2026-01-01',first:'2026-02-01',maturity:'2030-01-01',tenureCount:'4',tenureUnit:'years',notes:'',...extra});
+
+test('deposit forms link any saved bank account without changing issuer or name and protected banks show linked deposits',async context=>{
+ const second={...account,id:'second-bank',bankId:'brac-bank-plc',bankName:'BRAC Bank PLC',accountNumber:'00000987654321'},linked={...deposit,id:alice.sub,bankName:'AB Bank PLC',bankId:'ab-bank-plc',bankAccountId:account.id};
+ const app=await boot(context,{banks:[account,second],assets:[linked]});await app.click({nav:'bank-information'});assert.match(app.node('app').innerHTML,/1 linked deposit/);
+ await app.click({action:'bank-account-detail',id:account.id});assert.match(app.node('modal').innerHTML,/Linked deposits/);assert.match(app.node('modal').innerHTML,/ALICE_PRIVATE_DEPOSIT/);
+ await app.click({action:'delete-bank-account',id:account.id});assert.match(app.node('modal').innerHTML,/Unlink or reassign/);assert.doesNotMatch(app.node('modal').innerHTML,/data-action="confirm-delete-bank-account"/);assert.equal(app.saved().bankAccounts.length,2);
+ await app.click({action:'linked-deposit',id:linked.id});assert.match(app.node('modal').innerHTML,/Receiving bank account/);assert.match(app.node('modal').innerHTML,/00123456789012345/);
+ app.node('asset-form').elements={namedItem:id=>app.node(id)};await app.click({action:'edit',id:linked.id});const form=app.node('modal').innerHTML;
+ assert.match(form,/<label for="bankAccountId">Interest-receiving bank account \(optional\)<\/label>/);assert.match(form,/<option value=""[^>]*>Not linked<\/option>/);assert.match(form,/BRAC Bank PLC · Alice Example · 00000987654321/);assert.match(form,/value="bank-shared-id" selected/);
+ await app.dispatch('change',{target:{id:'bankAccountId',value:second.id}});assert.match(app.node('receiving-account-selection').innerHTML,/00000987654321/);assert.match(app.node('receiving-account-selection').innerHTML,/BRAC Bank PLC/);assert.equal(app.node('name').value,'ALICE_PRIVATE_DEPOSIT');assert.equal(app.node('bankName').value,'AB Bank PLC');
+ await app.submitForm('asset-form',depositValues({bankAccountId:second.id}));assert.equal(app.saved().assets[0].bankAccountId,second.id);assert.equal(app.saved().assets[0].bankName,'AB Bank PLC');assert.equal(app.saved().assets[0].name,'ALICE_PRIVATE_DEPOSIT');
+ await app.click({action:'edit',id:linked.id});await app.submitForm('asset-form',depositValues({bankAccountId:''}));assert(!Object.hasOwn(app.saved().assets[0],'bankAccountId'));
+ await app.click({action:'delete-bank-account',id:account.id});await app.click({action:'confirm-delete-bank-account',id:account.id});assert.equal(app.saved().bankAccounts.length,1);
+});
+
+test('unavailable links remain readable and can be kept or cleared without changing deposit terms',async context=>{
+ const linked={...deposit,id:alice.sub,bankAccountId:'missing-bank'};const app=await boot(context,{assets:[linked]});await app.click({action:'detail',id:linked.id});assert.match(app.node('modal').innerHTML,/saved account is unavailable/);
+ app.node('asset-form').elements={namedItem:id=>app.node(id)};await app.click({action:'edit',id:linked.id});assert.match(app.node('modal').innerHTML,/value="missing-bank" selected>Unavailable saved account/);
+ await app.submitForm('asset-form',depositValues({bankAccountId:'missing-bank'}));assert.equal(app.saved().assets[0].bankAccountId,'missing-bank');assert.equal(app.saved().assets[0].principal,linked.principal);
+ await app.click({action:'edit',id:linked.id});await app.submitForm('asset-form',depositValues({bankAccountId:'forged-new-reference'}));assert.match(app.node('form-error').textContent,/Choose a saved bank account/);assert.equal(app.saved().assets[0].bankAccountId,'missing-bank');
+});
+
+test('received payment forms have no received-date input and preserve bank identity and historical dates on edits',async context=>{
+ const linked={...deposit,id:alice.sub,bankAccountId:account.id},receiptId=linked.id+':2026-02-01';const app=await boot(context,{banks:[account],assets:[linked]});
+ await app.click({action:'receipt',id:receiptId});assert.doesNotMatch(app.node('modal').innerHTML,/receipt-date|Date received|name="date"/);assert.match(app.node('modal').innerHTML,/Receiving bank account/);assert.match(app.node('modal').innerHTML,/00123456789012345/);
+ await app.submitForm('receipt-form',{amount:'75',notes:'Test receipt'});let receipt=app.saved().paid[receiptId];assert.equal(receipt.date,'2026-02-01');assert.equal(receipt.snapshot.bankAccountId,account.id);assert.equal(receipt.snapshot.bankAccountSnapshot.accountNumber,account.accountNumber);
+ await app.click({action:'edit-bank-account',id:account.id});await app.submit({...fields,accountNumber:'0000000000001',accountTitle:'Changed Holder'});
+ await app.click({action:'receipt',id:receiptId});assert.match(app.node('modal').innerHTML,/00123456789012345/);assert.doesNotMatch(app.node('modal').innerHTML,/Changed Holder/);await app.submitForm('receipt-form',{amount:'76',notes:'Edited receipt'});
+ receipt=app.saved().paid[receiptId];assert.equal(receipt.date,'2026-02-01');assert.equal(receipt.snapshot.bankAccountSnapshot.accountTitle,account.accountTitle);assert.equal(receipt.snapshot.bankAccountSnapshot.accountNumber,account.accountNumber);
+});
+
+test('old received receipts stay unattributed and presentation filters by the scheduled payment date',async context=>{
+ const linked={...deposit,id:alice.sub,bankAccountId:account.id},receiptId=linked.id+':2026-02-01',snapshot={assetId:linked.id,name:linked.name,type:'FDR',scheduledDate:'2026-02-01',kind:'Interest',gross:8333,tax:833,expected:7500,principal:0},legacy={amount:7500,date:'2026-03-15',snapshot};
+ const app=await boot(context,{banks:[account],assets:[linked],paid:{[receiptId]:legacy}});await app.click({action:'receipt',id:receiptId});assert.match(app.node('modal').innerHTML,/Not recorded for this payment/);assert.doesNotMatch(app.node('modal').innerHTML,/00123456789012345/);await app.submitForm('receipt-form',{amount:'76',notes:'Legacy edit'});assert.equal(app.saved().paid[receiptId].date,legacy.date);assert.deepEqual(app.saved().paid[receiptId].snapshot,snapshot);
+ await app.click({action:'received'});await app.dispatch('change',{target:{id:'payment-month',value:'2026-02'}});assert.match(app.node('app').innerHTML,/class="payment-item"/);assert.match(app.node('app').innerHTML,/<small>Feb<\/small><b>1<\/b>/);
+ await app.dispatch('change',{target:{id:'payment-month',value:'2026-03'}});assert.doesNotMatch(app.node('app').innerHTML,/class="payment-item"/);
+});
+
+test('stale linked-deposit actions and account-selection forms cannot cross account scopes',async context=>{
+ const linked={...deposit,id:alice.sub,bankAccountId:account.id},app=await boot(context,{banks:[account],assets:[linked]});await app.click({action:'bank-account-detail',id:account.id});const staleAction={...app.actionData('linked-deposit',linked.id)};
+ app.node('asset-form').elements={namedItem:id=>app.node(id)};await app.click({action:'edit',id:linked.id});const staleForm=app.makeForm('asset-form',depositValues({bankAccountId:account.id}));await app.switchToBob();
+ await app.click(staleAction);assert.equal(app.node('modal').open,false);await app.dispatch('submit',{target:staleForm,preventDefault(){}});assert.equal(app.saved().assets[0].name,'BOB_PRIVATE_DEPOSIT');assert(!Object.hasOwn(app.saved().assets[0],'bankAccountId'));assert.equal(app.saved().bankAccounts[0].accountTitle,'Bob Example');
 });

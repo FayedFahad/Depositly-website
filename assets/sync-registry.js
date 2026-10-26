@@ -7,7 +7,7 @@
  const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}':JSON.stringify(value);
  const equal=(a,b)=>canonical(a)===canonical(b);
  // Related terms must move together so concurrent edits cannot form an invalid schedule.
- const groups=[['type','cycle','cycleUnit','start','first','maturity','autoRenew','renewalStop','tenureCount','tenureUnit'],['ownership','ownerName']];
+ const groups=[['type','interestType','cycle','cycleUnit','start','first','maturity','autoRenew','renewalStop','tenureCount','tenureUnit'],['ownership','ownerName']];
  const compare=(a,b)=>a[0]-b[0]||a[1]-b[1]||(a[2]<b[2]?-1:a[2]>b[2]?1:0);
  const empty=()=>({version:1,entries:Object.create(null)});
  function validate(doc){
@@ -70,6 +70,8 @@
   data.scope='all';data.assets=Object.keys(assets).sort().filter(id=>alive['a/'+escape(id)]).map(id=>assets[id]);
   const ids=new Set(data.assets.map(asset=>asset.id));
   data.paid=Object.fromEntries(Object.entries(paid).filter(([id])=>alive['r/'+escape(id)]&&ids.has(id.split(':')[0])));
+  if(data.assets.some(asset=>Object.hasOwn(asset,'bankAccountId'))||Object.values(data.paid).some(receipt=>receipt.snapshot&&(Object.hasOwn(receipt.snapshot,'bankAccountId')||Object.hasOwn(receipt.snapshot,'bankAccountSnapshot'))))data.minReaderVersion=Math.max(7,Number(data.minReaderVersion)||0);
+  else if(data.assets.some(asset=>asset.interestType==='compound'))data.minReaderVersion=Math.max(6,Number(data.minReaderVersion)||0);
   return {format:'depositly-google-drive',version:1,data,notificationSettings:{enabled:false,time:'09:00',...notifications},sync:clone(doc)};
  }
  const api=Object.freeze({create,fromBackup,change,merge,backup,validate,equal,canonical});

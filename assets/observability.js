@@ -1,7 +1,7 @@
 import {inject, pageview} from '@vercel/analytics';
 import {injectSpeedInsights} from '@vercel/speed-insights';
 
-const sections=new Set(['dashboard','deposits','bank-information','calendar','payments','backup','settings']);
+const sections=new Set(['dashboard','deposits','bank-information','forecast','calendar','payments','backup','settings']);
 const publicRoutes=new Set([...sections].map(section=>'/'+section).concat(['/privacy/','/terms/']));
 const started=new WeakSet();
 

@@ -4,6 +4,7 @@ import {setImmediate as nextTurn} from 'node:timers/promises';
 import {accountWorkspaceKey} from '../assets/account-workspaces.js';
 import {emptyState, Transfer} from '../assets/data-engine.js';
 import {AUTH_EVENT_KEY} from '../assets/cloud-sync.js';
+import '../assets/sync-registry.js';
 
 const alice = {sub: 'account-a', email: 'a@example.com', name: 'Alice'};
 const bob = {sub: 'account-b', email: 'b@example.com', name: 'Bob'};
@@ -35,9 +36,12 @@ async function boot(context, options = {}) {
   };
   const savedAlice=workspace(alice,'ALICE_PRIVATE_DEPOSIT');
   if(options.defaultDepositView)savedAlice.data.defaultDepositView=options.defaultDepositView;
+  if(options.asset)savedAlice.data.assets=[{...options.asset,id:alice.sub,name:'ALICE_PRIVATE_DEPOSIT'}];
+  if(options.paid)savedAlice.data.paid=options.paid;
+  if(options.rawRegistry)savedAlice.syncDocument=globalThis.DepositlySync.create({format:'depositly-google-drive',version:1,data:{...savedAlice.data,scope:'all'},notificationSettings:savedAlice.reminders},'legacy-test',1);
   const values = new Map([[accountWorkspaceKey(alice), JSON.stringify(savedAlice)], [accountWorkspaceKey(bob), JSON.stringify(workspace(bob, 'BOB_PRIVATE_DEPOSIT'))]]);
-  const storage = {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key)};
-  const server = {user: alice, failSession: !!options.failSession, pendingSession: options.pendingSession || null, sessionCalls: 0, syncSaves:0};
+  const storage = {getItem: key => values.get(key) ?? null, setItem: (key, value) => {if(server.failWrites)throw Error('Storage unavailable');values.set(key, value);}, removeItem: key => values.delete(key)};
+  const server = {user: alice, failWrites:!!options.failWrites, failSession: !!options.failSession, pendingSession: options.pendingSession || null, sessionCalls: 0, syncSaves:0,posted:[]};
   const session = user => user ? {authenticated: true, configured: true, user, csrfToken: 'private-test-csrf-token', expiresAt: Date.now() + 100000} : {authenticated: false, configured: true};
   replace('document', {hidden: false, body: {classList: classList()}, getElementById: node, querySelector: node,
     addEventListener: (type, callback) => register(documentListeners, type, callback)});
@@ -49,7 +53,7 @@ async function boot(context, options = {}) {
   replace('setInterval', () => 0);
   replace('setTimeout', (callback, duration) => { if (duration === 0) queueMicrotask(callback); return 0; });
   replace('clearTimeout', () => {});
-  replace('fetch', async url => {
+  replace('fetch', async (url,init={}) => {
     const path = new URL(url, 'https://depositly.example').pathname;
     if (path === '/api/auth/session') {
       server.sessionCalls++;
@@ -59,7 +63,7 @@ async function boot(context, options = {}) {
     }
     if (path === '/api/drive/latest') return response({latest: null});
     if (path === '/api/drive/registry') return response({unchanged:true,heads:(new URL(url,'https://depositly.example').searchParams.get('known')||'').split(',').filter(Boolean)});
-    if (path === '/api/drive/save-version') {server.syncSaves++;return response({file:{id:'sync-'+server.user.sub,createdTime:'2026-10-24T00:00:00Z'}});}
+    if (path === '/api/drive/save-version') {server.syncSaves++;server.posted.push(JSON.parse(init.body));return response({file:{id:'sync-'+server.user.sub,createdTime:'2026-10-24T00:00:00Z'}});}
     if (path === '/api/auth/config') return response({configured: true, missing: []});
     throw Error(`Unexpected endpoint ${path}`);
   });
@@ -68,7 +72,7 @@ async function boot(context, options = {}) {
   if(options.beforeReady)await options.beforeReady({server, node, renders, session, retry: async()=>{for(const callback of documentListeners.get('click')||[])await callback({target:{dataset:{action:'retry-account'},tagName:'BUTTON',disabled:false,closest(){return this;}},preventDefault(){}});}});
   await until(() => node('app').innerHTML.includes('ALICE_PRIVATE_DEPOSIT') && node('app').innerHTML.includes('aria-busy="false"'), 'initial verified Alice workspace should open');
   await until(()=>node('connect-top').disabled===false,'initial account backup check should finish');
-  await until(()=>server.syncSaves>0,'initial quiet sync should save the existing local edits');await nextTurn();
+  if(!options.allowNoSync)await until(()=>server.syncSaves>0,'initial quiet sync should save the existing local edits');await nextTurn();
   const dispatchWindow = (type, event = {}) => { for (const callback of windowListeners.get(type) || []) callback(event); };
   const dispatchDocument = async (type, event) => { for (const callback of documentListeners.get(type) || []) await callback(event); };
   const click = action => dispatchDocument('click', {target: {dataset: typeof action==='string'?{action}:action, tagName: 'BUTTON', disabled: false, closest() { return this; }}, preventDefault() {}});
@@ -86,6 +90,20 @@ test('saved Android table preferences open as cards without modifying the backup
  await app.click('holding-view');
  assert.match(app.node('app').innerHTML,/class="holdings-grid"/);
  assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),saved,'layout changes must not rewrite Android settings or deposits');
+});
+
+const wrongHundred={type:'FDR',principal:30000000,rate:8,tds:15,cycle:3,cycleUnit:'months',start:'2026-10-01',first:'2027-01-01',maturity:'2027-01-09',tenureCount:100,tenureUnit:'days',autoRenew:true,ownership:'self'};
+test('opening an old quarterly/100-day workspace persists corrected registry fields using the raw baseline',async context=>{
+ const app=await boot(context,{asset:wrongHundred,rawRegistry:true}),saved=JSON.parse(app.storage.getItem(accountWorkspaceKey(alice))),entries=saved.syncDocument.entries;
+ assert.equal(saved.data.assets[0].cycle,100);assert.equal(saved.data.assets[0].first,'2027-01-09');assert.equal(entries['a/account-a/cycle'].v,100);assert.equal(entries['a/account-a/cycleUnit'].v,'days');assert.equal(entries['a/account-a/first'].v,'2027-01-09');
+ assert.equal(app.server.posted[0].backup.data.assets[0].cycle,100,'Drive receives the corrected schedule, not only the normalized screen');
+ const stamp=entries['a/account-a/cycle'].s;await app.click('theme');const changed=JSON.parse(app.storage.getItem(accountWorkspaceKey(alice)));assert.deepEqual(changed.syncDocument.entries['a/account-a/cycle'].s,stamp,'A later preference edit does not repeat the finance migration');
+ await app.click({nav:'forecast'});assert.match(app.node('app').innerHTML,/Net interest over time/);assert.doesNotMatch(app.node('app').innerHTML,/By investment/);
+});
+test('failed finance migration preserves durable data and retries from the original registry baseline',async context=>{
+ const app=await boot(context,{asset:wrongHundred,rawRegistry:true,failWrites:true,allowNoSync:true});
+ let saved=JSON.parse(app.storage.getItem(accountWorkspaceKey(alice)));assert.equal(saved.data.assets[0].cycle,3);assert.equal(saved.syncDocument.entries['a/account-a/cycle'].v,3);assert.equal(app.server.syncSaves,0,'Unsaved corrected state is not uploaded');
+ app.server.failWrites=false;await app.click('theme');saved=JSON.parse(app.storage.getItem(accountWorkspaceKey(alice)));assert.equal(saved.data.assets[0].cycle,100);assert.equal(saved.syncDocument.entries['a/account-a/cycle'].v,100,'Retry cannot treat the already-normalized screen as the original registry baseline');
 });
 
 test('allocation links open only the chosen deposit type in the current workspace',async context=>{
