@@ -14,6 +14,12 @@ Marking a payment received asks for the amount and an optional note. Payment lis
 
 The website uses static frontend assets plus Node.js API functions on Vercel. Google OAuth credentials and tokens are handled by the server and are not exposed to page JavaScript. A persistent encrypted, HttpOnly session cookie carries the opaque session needed to restore your connection after reopening the page. Local browser copies are separated by Google account; shared phone and web records synchronize through immutable Google Drive versions.
 
+## Theme preview workflow
+
+Use `codex/theme-preview` for theme changes and keep `main` for production. Push to the preview branch, then open its Vercel Preview deployment. Add `?demo=1` to the preview URL to test with sample deposits.
+
+After review and explicit approval, merge the preview branch into `main` to publish the theme. Preview work must not be pushed directly to `main` or promoted to production before approval.
+
 ## Configure Google and Vercel
 
 Use the Android app's Google Cloud project: **depositly**, project number **688859064258**. Its Web application OAuth client is `688859064258-h97snetju0b3rts3jltgd210dobn75f1.apps.googleusercontent.com`. Both OAuth clients must belong to this project to access the same hidden Drive application-data folder.
