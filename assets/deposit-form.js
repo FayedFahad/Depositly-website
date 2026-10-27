@@ -26,11 +26,9 @@ export function draftDeposit(values,old){
  else if(!values.payoutChoice&&old)cycleUnit=FDR.periodSpec(old).unit;
  const start=get('start'),choice=values.tenureChoice||depositFormChoices(old).tenureChoice;
  let tenureCount,tenureUnit;
- if(interestType==='simple'&&type==='FDR'&&cycleUnit==='days'&&cycle===100){tenureCount=100;tenureUnit='days';}
- else if(choice==='custom'){tenureCount=Number(values.customTenureCount);tenureUnit=values.customTenureUnit;}
+ if(choice==='custom'){tenureCount=Number(values.customTenureCount);tenureUnit=values.customTenureUnit;}
  else [tenureCount,tenureUnit]=choice==='100days'?[100,'days']:choice==='1year'?[1,'years']:[3,'years'];
  if(interestType==='compound'){cycleUnit=tenureUnit==='days'?'days':'months';cycle=tenureCount*(tenureUnit==='years'?12:1);}
- else if(type==='FDR'&&tenureCount===100&&tenureUnit==='days'){cycleUnit='days';cycle=100;}
  if(!Number.isInteger(cycle)||cycle<1||!['days','months'].includes(cycleUnit)||!Number.isInteger(tenureCount)||tenureCount<1||!['days','months','years'].includes(tenureUnit))throw Error('Enter a positive whole number for the custom cycle and tenure.');
  if(!Transfer.validDate(start))throw Error('Enter a valid issue date.');
  const maturity=tenureUnit==='days'?FDR.days(start,tenureCount):FDR.months(start,tenureCount*(tenureUnit==='years'?12:1)),autoRenew=type==='FDR'&&values.autoRenew==='on';

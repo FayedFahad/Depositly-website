@@ -35,11 +35,10 @@ test('deposit drafts match the actual phone form across presets, custom terms, e
  }
 });
 
-test('100-day payout and tenure presets save exact-day contracts and preserve supplied fields',()=>{
- for(const change of [{payoutChoice:'100'},{tenureChoice:'100days'},{payoutChoice:'custom',customPayoutCount:'100',customPayoutUnit:'days'},customTerm(100,'days')]){
-  const a=draftDeposit({...values,...change});assert.equal(a.cycle,100);assert.equal(a.cycleUnit,'days');assert.equal(a.tenureCount,100);assert.equal(a.tenureUnit,'days');assert.equal(a.first,'2027-01-09');assert.equal(a.maturity,'2027-01-09');assert.equal(a.reference,'00123');assert.equal(a.notes,values.notes);assert.equal(firstPayoutEstimate(a),566667);
-  assert.deepEqual(FDR.schedule(a,'2027-07-28').map(p=>p.date),['2027-01-09','2027-04-19','2027-07-28']);
- }
+test('100-day payouts and tenures retain independent selected terms',()=>{
+ const payout=draftDeposit({...values,payoutChoice:'100'});assert.equal(payout.cycle,100);assert.equal(payout.tenureCount,3);assert.equal(payout.tenureUnit,'years');assert.equal(payout.maturity,'2029-10-01');
+ const tenure=draftDeposit({...values,tenureChoice:'100days'});assert.equal(tenure.cycle,3);assert.equal(tenure.cycleUnit,'months');assert.equal(tenure.tenureCount,100);assert.equal(tenure.tenureUnit,'days');assert.equal(tenure.first,'2027-01-01');assert.equal(tenure.maturity,'2027-01-09');
+ for(const a of [payout,tenure]){assert.equal(a.reference,'00123');assert.equal(a.notes,values.notes);assert(Transfer.validAsset({...a,id:'independent'}));}
 });
 
 test('custom 90-day input derives the screenshot schedule; independent dates cannot change it',()=>{

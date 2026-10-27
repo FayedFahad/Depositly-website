@@ -30,7 +30,8 @@ const cycleLabel=a=>{let p=periodSpec(a);return p.unit==='days'?p.count+' days':
 function normalizeAsset(a){
  if(!a||typeof a!=='object')return a;
  if(['NSC','Sanchaypatra','National Savings Certificate'].includes(a.type)&&(a.autoRenew===true||a.renewalStop!==undefined)){const next={...a,autoRenew:false};delete next.renewalStop;return next;}
- if(a.type==='FDR'&&a.interestType!=='compound'&&typeof a.start==='string'&&a.cycle===3&&[undefined,'months'].includes(a.cycleUnit)&&a.first===months(a.start,3)&&a.maturity===days(a.start,100)&&(a.tenureCount===undefined&&a.tenureUnit===undefined||a.tenureCount===100&&a.tenureUnit==='days'))return {...a,cycle:100,cycleUnit:'days',first:a.maturity,tenureCount:100,tenureUnit:'days'};
+ // Only legacy records without an explicit interest type need the old 100-day correction.
+ if(a.type==='FDR'&&a.interestType===undefined&&typeof a.start==='string'&&a.cycle===3&&[undefined,'months'].includes(a.cycleUnit)&&a.first===months(a.start,3)&&a.maturity===days(a.start,100)&&(a.tenureCount===undefined&&a.tenureUnit===undefined||a.tenureCount===100&&a.tenureUnit==='days'))return {...a,cycle:100,cycleUnit:'days',first:a.maturity,tenureCount:100,tenureUnit:'days'};
  return a;
 }
 const normalizeAssetChanged=a=>normalizeAsset(a)!==a;
