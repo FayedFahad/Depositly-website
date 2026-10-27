@@ -317,21 +317,14 @@ function updateAssetPreview(){
  }catch(error){$('asset-preview').textContent='—';$('asset-preview-dates').innerHTML='';$('asset-preview-caption').textContent=error.message.includes('supported amount limit')?error.message:'Complete the deposit terms to see an estimate.';}
 }
 function syncAssetForm(source=''){
- const form=$('asset-form');if(!form)return;const input=id=>form.elements.namedItem(id),compound=input('interestType').value==='compound',fdr=input('type').value==='FDR',sourceCycle=['payoutChoice','customPayoutCount','customPayoutUnit'].includes(source),sourceTerm=['tenureChoice','customTenureCount','customTenureUnit'].includes(source);
- if(!compound&&fdr){
-  let hundredTerm=input('tenureChoice').value==='100days'||input('tenureChoice').value==='custom'&&Number(input('customTenureCount').value)===100&&input('customTenureUnit').value==='days';
-  if(sourceTerm&&!hundredTerm&&input('payoutChoice').value==='100')input('payoutChoice').value='3';
-  if(sourceCycle&&input('payoutChoice').value!=='100'&&hundredTerm){input('tenureChoice').value='1year';hundredTerm=false;}
-  if(sourceTerm&&hundredTerm)input('payoutChoice').value='100';else if(input('payoutChoice').value==='100')input('tenureChoice').value='100days';else if(hundredTerm)input('payoutChoice').value='100';
- }
+ const form=$('asset-form');if(!form)return;const input=id=>form.elements.namedItem(id),compound=input('interestType').value==='compound',fdr=input('type').value==='FDR';
  const custom=input('payoutChoice').value==='custom'&&!compound;
  $('payoutChoice-field').hidden=compound;$('compoundControl').hidden=!compound;input('payoutChoice').disabled=compound;$('customPayout').hidden=!custom;input('customPayoutCount').required=custom;input('customPayoutCount').disabled=compound;input('customPayoutUnit').disabled=compound;
- const unit=custom?input('customPayoutUnit').value:input('payoutChoice').value==='100'?'days':'months',count=custom?Number(input('customPayoutCount').value):Number(input('payoutChoice').value),hundred=fdr&&!compound&&unit==='days'&&count===100;
- if(hundred)input('tenureChoice').value='100days';
- if(hundred&&form.dataset.hundred==='false')input('autoRenew').checked=true;form.dataset.hundred=String(hundred);
+ if(!custom&&!compound){input('customPayoutCount').value=input('payoutChoice').value;input('customPayoutUnit').value=input('payoutChoice').value==='100'?'days':'months';}
  $('autoRenew-field').hidden=!fdr;input('autoRenew').disabled=!fdr;if(!fdr)input('autoRenew').checked=false;
  $('renewalHelp').textContent=compound?'Add net interest to principal at each maturity, then renew at the same rate and tax. Stop from investment details.':'Renew the principal for the same tenure, rate and tax. Interest is paid separately. Stop from investment details.';
  const customTerm=input('tenureChoice').value==='custom';$('customTenure').hidden=!customTerm;input('customTenureCount').required=customTerm;
+ if(!customTerm){const [count,unit]=input('tenureChoice').value==='100days'?[100,'days']:input('tenureChoice').value==='1year'?[1,'years']:[3,'years'];input('customTenureCount').value=String(count);input('customTenureUnit').value=unit;}
  updateAssetPreview();
 }
 
