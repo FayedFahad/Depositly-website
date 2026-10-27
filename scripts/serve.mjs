@@ -64,7 +64,7 @@ const server = createServer(async (request, response) => {
     let pathname = decodeURIComponent(requestUrl.pathname);
     if (pathname.endsWith('/')) pathname += 'index.html';
     if (pathname === '/privacy' || pathname === '/terms') pathname += '/index.html';
-    const allowed = ['/index.html', '/config.js', '/privacy/index.html', '/terms/index.html'].includes(pathname) || pathname.startsWith('/assets/');
+    const allowed = ['/index.html', '/config.js', '/favicon.ico', '/favicon.png', '/privacy/index.html', '/terms/index.html'].includes(pathname) || pathname.startsWith('/assets/');
     if (!allowed || pathname.includes('\\') || pathname.includes('\0')) throw new Error('Not found');
     const target = await realpath(path.resolve(root, `.${pathname}`));
     const relative = path.relative(root, target);

@@ -31,7 +31,7 @@ async function copyPublic(relative) {
   } else throw new Error('Unsupported public asset type.');
 }
 // Never copy the repository root: server code and environment files stay private.
-for (const relative of ['index.html', 'config.js', 'assets', 'privacy', 'terms']) await copyPublic(relative);
+for (const relative of ['index.html', 'config.js', 'favicon.ico', 'favicon.png', 'assets', 'privacy', 'terms']) await copyPublic(relative);
 await build({...observabilityBuildOptions,outfile:path.join(output,'assets','observability.js')});
 await mkdir(path.join(output,'assets','licenses'),{recursive:true});
 for(const name of ['analytics','speed-insights']){
