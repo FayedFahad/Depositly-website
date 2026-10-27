@@ -206,7 +206,7 @@ test('a delayed clipboard failure does not copy the previous account through the
  assert.deepEqual(app.server.copied,[]);assert.equal(app.node('modal').open,false);
 });
 
-const depositValues=extra=>({name:'ALICE_PRIVATE_DEPOSIT',type:'FDR',interestType:'simple',ownership:'self',ownerName:'Alice Example',bankName:'AB Bank PLC',reference:'00123',principal:'10000',rate:'10',tds:'10',cycle:'1',cycleUnit:'months',start:'2026-01-01',first:'2026-02-01',maturity:'2030-01-01',tenureCount:'4',tenureUnit:'years',notes:'',...extra});
+const depositValues=extra=>({name:'ALICE_PRIVATE_DEPOSIT',type:'FDR',interestType:'simple',ownership:'self',ownerName:'Alice Example',bankName:'AB Bank PLC',reference:'00123',principal:'10000',rate:'10',tds:'10',payoutChoice:'1',tenureChoice:'custom',customTenureCount:'4',customTenureUnit:'years',start:'2026-01-01',first:'2026-02-01',maturity:'2030-01-01',tenureCount:'4',tenureUnit:'years',notes:'',...extra});
 
 test('deposit forms link any saved bank account without changing issuer or name and protected banks show linked deposits',async context=>{
  const second={...account,id:'second-bank',bankId:'brac-bank-plc',bankName:'BRAC Bank PLC',accountNumber:'00000987654321'},linked={...deposit,id:alice.sub,bankName:'AB Bank PLC',bankId:'ab-bank-plc',bankAccountId:account.id};

@@ -2221,6 +2221,20 @@ dialog[open] {
   font-variant-numeric: tabular-nums;
 }
 
+.deposit-preview-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  margin: 18px 0 0;
+  font-size: 12px;
+}
+
+.deposit-preview-dates dt { color: var(--muted); margin-bottom: 4px; }
+.deposit-preview-dates dd { margin: 0; font-weight: 650; }
+#asset-form .full { grid-column: 1 / -1; }
+#renewalHelp { font-size: 12px; line-height: 1.6; margin-top: 8px; }
+.deposit-calculation-help { margin-top: 20px; }
+
 .form-error {
   font-size: 12.5px;
   color: var(--danger);

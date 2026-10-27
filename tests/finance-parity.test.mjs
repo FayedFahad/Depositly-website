@@ -15,7 +15,9 @@ const compound = {...base,id:'compound',interestType:'compound',principal:100000
 test('web schedules, range windows, compound balances and interchange match the current phone', {skip:!fs.existsSync(androidPath)}, () => {
   const android = vm.createContext({}), html = fs.readFileSync(androidPath,'utf8');
   for (const block of [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].slice(0,2)) vm.runInContext(block[1],android);
+  for(const [name,method] of Object.entries(FDR))if(typeof method==='function')assert.equal(String(method).replaceAll('\r\n','\n'),String(android.FDR[name]).replaceAll('\r\n','\n'),'Exact phone calculation source: '+name);
   const samples = [base,{...base,id:'legacy-quarter',cycle:3,cycleUnit:'months',first:'2027-01-01'},
+    {...base,id:'screenshot-90-days',rate:8.25,start:'2026-10-27',first:'2027-01-25',maturity:'2027-10-27',cycle:90,tenureCount:1,tenureUnit:'years'},
     {...base,id:'month-end',start:'2026-01-31',first:'2026-02-28',maturity:'2026-02-28',cycle:1,cycleUnit:'months',tenureCount:1,tenureUnit:'months'},
     {...base,id:'custom-day',first:'2026-10-15',maturity:'2027-03-30',cycle:14,tenureCount:180},
     {...base,id:'short-term',first:'2026-10-11',maturity:'2026-10-11',cycle:1,cycleUnit:'months',tenureCount:10},
@@ -39,6 +41,24 @@ test('web schedules, range windows, compound balances and interchange match the 
   assert.deepEqual(Transfer.migrate(Transfer.exportData(input)),json(android.Transfer.migrate(android.Transfer.exportData(input))));
   assert.equal(Transfer.instrumentCSV(input),android.Transfer.instrumentCSV(input));
   assert.deepEqual(Transfer.readInstrumentCSV(Transfer.instrumentCSV(input)),json(android.Transfer.readInstrumentCSV(android.Transfer.instrumentCSV(input))));
+});
+
+test('all website cash surfaces match phone receipt reconciliation for the 90-day screenshot and legacy receipts',{skip:!fs.existsSync(androidPath)},()=>{
+ const html=fs.readFileSync(androidPath,'utf8'),android=vm.createContext({});
+ for(const block of [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].slice(0,2))vm.runInContext(block[1],android);
+ vm.runInContext('const days=FDR.days,months=FDR.months,schedule=FDR.schedule;'+html.slice(html.indexOf('function reconcileHundredDayReceipts('),html.indexOf('function displayCashEvents(')),android);
+ const screenshot={...base,id:'screenshot',rate:8.25,start:'2026-10-27',first:'2027-01-25',maturity:'2027-10-27',cycle:90,tenureCount:1,tenureUnit:'years'};
+ for(const asset of [screenshot,base,compound]){
+  let input=state([asset]);
+  const list=FDR.schedule(asset,'2028-04-30');
+  if(list.length)input=recordPayment(input,list[0].id,{amount:list[0].net,date:list[0].date,notes:'Preserved receipt'});
+  if(asset===base){const legacy=FDR.legacySchedule({...base,first:'2027-01-01',cycle:3,cycleUnit:'months'},base.maturity)[0];input.paid[legacy.id]={amount:legacy.net,date:legacy.date,snapshot:Transfer.snapshot(legacy)};}
+  android.state=input;android.asset=asset;
+  const phone=json(vm.runInContext("investmentCashEvents(asset,'2028-04-30')",android)),expected=phone.sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+  assert.deepEqual(events(input,'2028-04-30'),expected);
+  for(const event of expected)assert.equal(eventById(input,event.id)?.net,input.paid[event.id]?.snapshot.expected??event.net);
+  for(const from of ['2026-10-27','2027-10-27','2028-01-01'])assert.deepEqual(eventsRange(input,{from,through:'2028-04-30'}),expected.filter(event=>event.date>=from));
+ }
 });
 
 test('exact day payouts, month fractions and original calendar anchors use the confirmed rules', () => {

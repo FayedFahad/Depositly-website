@@ -9,7 +9,7 @@ const account={id:'bankA',bankId:'brac-bank-plc',bankName:'BRAC Bank PLC',accoun
 const other={...account,id:'bankB',bankName:'Another Bank',accountTitle:'Another Holder',accountNumber:'000987654321'};
 const state=(assets=[{...asset,bankAccountId:account.id}],banks=[account,other])=>({...emptyState(),assets,bankAccounts:banks});
 const id=asset.id+':'+asset.first;
-const values={...asset,principal:'100000',bankAccountId:account.id,autoRenew:false};
+const values={...asset,payoutChoice:'1',tenureChoice:'1year',principal:'100000',bankAccountId:account.id,autoRenew:false};
 
 test('optional account links are independent of deposit institution and never change the supplied name',()=>{
  const legacy=Transfer.migrate(state([asset]));assert(!Object.hasOwn(legacy.assets[0],'bankAccountId'));

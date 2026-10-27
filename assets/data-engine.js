@@ -300,46 +300,10 @@ export function investmentCashEvents(state, input, through = eventHorizon()) {
   }
   return result;
 }
-// Skip directly to the visible calendar window while retaining the exact Android rules.
+// Use Android's schedule for every cash surface; date windows only filter its output.
 export function scheduleRange(input, {from = '1900-01-01', through = eventHorizon(), limit = Infinity} = {}) {
   if (!Transfer.validDate(from) || !Transfer.validDate(through) || from > through || limit <= 0) return [];
-  const asset = FDR.normalizeAsset(input);
-  if (asset.interestType === 'compound') return FDR.schedule(asset, through).filter(event => event.date >= from).slice(0, limit);
-  const period = FDR.periodSpec(asset), continues = asset.type === 'FDR' && asset.autoRenew === true, end = FDR.endDate(asset);
-  const last = end && end < through ? end : through;
-  if (!Number.isInteger(period.count) || period.count < 1 || !['days','months'].includes(period.unit)) throw Error('Invalid payout cycle.');
-  const standard = period.unit === 'days' ? FDR.days(asset.start, period.count) : FDR.months(asset.start, period.count), anchored = asset.first === standard;
-  const at = n => {
-    const value = period.unit === 'days' ? FDR.days(asset.first, (n - 1) * period.count) : FDR.months(anchored ? asset.start : asset.first, anchored ? n * period.count : (n - 1) * period.count);
-    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '9999-12-31';
-  };
-  const lower = (value, strict = false) => {
-    let lo = 1, hi = 110001;
-    while (lo < hi) { const mid = Math.floor((lo + hi) / 2), day = at(mid); if (strict ? day <= value : day < value) lo = mid + 1; else hi = mid; }
-    return lo;
-  };
-  const result = [];
-  for (let n = lower(from); n <= 110000 && result.length < limit; n++) {
-    const date = at(n); if (date > last) break;
-    const term = continues ? FDR.renewalTerm(asset, date) : 1;
-    const start = term > 1 ? FDR.renewalDate(asset, term - 1) : asset.start;
-    const previous = n > 1 ? at(n - 1) : asset.start;
-    const interest = previous < start || n === 1 && !anchored ? FDR.amount(asset, FDR.difference(date, start)) : FDR.periodAmount(asset, period.count, period.unit);
-    result.push({id: asset.id + ':' + date, date, asset, kind: 'Interest', ...interest, principal: 0});
-  }
-  let term = continues ? FDR.renewalTerm(asset, from) : 1, stubCount = 0;
-  for (; term <= 110000 && stubCount < limit; term++) {
-    const start = term > 1 ? FDR.renewalDate(asset, term - 1) : asset.start, maturity = continues ? FDR.renewalDate(asset, term) : asset.maturity;
-    if (maturity > through || end && maturity > end) break;
-    if (maturity >= from) {
-      const previousIndex = Math.min(lower(maturity, true) - 1, 110000), previous = previousIndex > 0 ? at(previousIndex) : asset.start;
-      const lastPayout = previous > start ? previous : start;
-      if (lastPayout < maturity) {result.push({id: asset.id + ':' + maturity + ':final', date: maturity, asset, kind: 'Final interest', ...FDR.amount(asset, FDR.difference(maturity, lastPayout)), principal: 0}); stubCount++;}
-      if (!continues || asset.renewalStop === maturity) {result.push({id: asset.id + ':principal', date: maturity, asset, kind: 'Principal return', gross: 0, tax: 0, net: asset.principal, principal: asset.principal}); stubCount++;}
-    }
-    if (!continues || asset.renewalStop === maturity) break;
-  }
-  return result.sort((a,b) => a.date.localeCompare(b.date) || Number(!!a.principal) - Number(!!b.principal)).slice(0, limit);
+  return FDR.schedule(input, through).filter(event => event.date >= from).slice(0, limit);
 }
 // Workspace mutations replace assets/paid. Cache only a few read-only date windows,
 // sharing them across navigation and display-preference changes.
