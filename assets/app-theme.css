@@ -1,0 +1,262 @@
+/* Phone app theme, adapted to the web workspace. Source: Android Build 15.
+   Keep this after the component styles so every page shares the same palette. */
+:root {
+  color-scheme: light;
+  --bg: #f2f6f1;
+  --canvas: var(--bg);
+  --surface: #ffffff;
+  --surface-subtle: #f7faf6;
+  --surface-elevated: #ffffff;
+  --surface-hover: #edf5ee;
+  --surface-alt: #e4f2ea;
+  --ink: #10261f;
+  --ink-secondary: #334e43;
+  --copy: var(--ink-secondary);
+  --text: var(--ink);
+  --muted: #566a62;
+  --muted-light: #607266;
+  --line: #e0e8e1;
+  --line-subtle: #edf2ec;
+  --line-hover: #aec9b9;
+  --primary: #0f6a52;
+  --primary-hover: #14876a;
+  --primary-active: #0c513f;
+  --primary-dark: #0c513f;
+  --primary-soft: #e4f2ea;
+  --primary-glow: #14876a26;
+  --on-primary: #ffffff;
+  --brand: var(--primary);
+  --brand-2: #14876a;
+  --forest: var(--primary);
+  --lime: #d9f27a;
+  --accent: #d9f27a;
+  --accent-soft: var(--primary-soft);
+  --soft: var(--primary-soft);
+  --link: var(--primary);
+  --success: #0f6a52;
+  --success-hover: #0c513f;
+  --success-soft: #e4f2ea;
+  --success-glow: #14876a26;
+  --green: var(--success);
+  --positive: var(--success);
+  --positive-soft: var(--success-soft);
+  --warning: #916416;
+  --warning-soft: #fcf3da;
+  --danger: #b8392d;
+  --danger-hover: #972b22;
+  --danger-soft: #fcece8;
+  --red: var(--danger);
+  --purple: #7248ad;
+  --purple-soft: #f2ecf9;
+  --sidebar: #f7faf6;
+  --sidebar-card: #e4f2ea;
+  --sidebar-line: #e0e8e1;
+  --sidebar-text: #566a62;
+  --sidebar-text-bright: #10261f;
+  --header-bg: #f2f6f1f2;
+  --allocation-fdr: #0f6a52;
+  --allocation-nsc: #879b39;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --shadow-sm: 0 1px 2px #10382a0d;
+  --shadow: 0 1px 2px #10382a0d, 0 4px 14px -6px #10382a1f;
+  --shadow-md: 0 2px 4px #10382a0a, 0 14px 32px -12px #10382a38;
+  --shadow-lg: 0 8px 24px -8px #10382a26;
+  --shadow-xl: 0 18px 48px -16px #10382a38;
+  --ring: 0 0 0 3px #14876a40;
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+
+body.dark {
+  color-scheme: dark;
+  --bg: #0a1511;
+  --canvas: var(--bg);
+  --surface: #13211b;
+  --surface-subtle: #18281f;
+  --surface-elevated: #1c3025;
+  --surface-hover: #20382c;
+  --surface-alt: #1f3529;
+  --ink: #ecf5ee;
+  --ink-secondary: #cbded1;
+  --copy: var(--ink-secondary);
+  --text: var(--ink);
+  --muted: #a9bdb1;
+  --muted-light: #92aa9b;
+  --line: #263a30;
+  --line-subtle: #1c3025;
+  --line-hover: #4c6c59;
+  --primary: #b9e08f;
+  --primary-hover: #cdeea3;
+  --primary-active: #a9d17f;
+  --primary-dark: #cdeea3;
+  --primary-soft: #1f3529;
+  --primary-glow: #b9e08f26;
+  --on-primary: #0d2a1f;
+  --brand: var(--primary);
+  --brand-2: #8fd4a8;
+  --forest: var(--primary);
+  --link: var(--primary);
+  --soft: var(--primary-soft);
+  --accent-soft: var(--primary-soft);
+  --success: #b9e08f;
+  --success-hover: #cdeea3;
+  --success-soft: #1f3529;
+  --success-glow: #b9e08f26;
+  --green: var(--success);
+  --positive: var(--success);
+  --positive-soft: var(--success-soft);
+  --warning: #e9bf5a;
+  --warning-soft: #352c17;
+  --danger: #ff9d8b;
+  --danger-hover: #ffb6a8;
+  --danger-soft: #3c251f;
+  --red: var(--danger);
+  --purple: #d1b0ff;
+  --purple-soft: #30243e;
+  --sidebar: #0d1b15;
+  --sidebar-card: #1f3529;
+  --sidebar-line: #263a30;
+  --sidebar-text: #a9bdb1;
+  --sidebar-text-bright: #ecf5ee;
+  --header-bg: #0a1511f2;
+  --allocation-fdr: #b9e08f;
+  --allocation-nsc: #43896b;
+  --shadow-sm: 0 1px 2px #00000040;
+  --shadow: 0 1px 2px #00000040, 0 6px 18px -8px #00000080;
+  --shadow-md: 0 2px 4px #00000040, 0 18px 36px -14px #000000b0;
+  --shadow-lg: 0 10px 30px -10px #00000080;
+  --shadow-xl: 0 18px 48px -12px #000000b0;
+  --ring: 0 0 0 3px #b9e08f40;
+}
+
+body {
+  background: radial-gradient(120% 60% at 100% -10%, #c8e8c633, transparent 55%),
+    radial-gradient(90% 50% at -10% 0, #d9f27a1f, transparent 60%), var(--bg);
+  background-attachment: fixed;
+  font-size: 15px;
+  color: var(--ink);
+  accent-color: var(--primary);
+}
+body.dark {
+  background: radial-gradient(120% 60% at 100% -10%, #1d4a3a55, transparent 55%),
+    radial-gradient(90% 50% at -10% 0, #b9e08f12, transparent 60%), var(--bg);
+  background-attachment: fixed;
+}
+::selection {background: var(--accent); color: #10261f}
+input, textarea {caret-color: var(--primary)}
+input::placeholder, textarea::placeholder {color: var(--muted)}
+:focus-visible {outline-color: var(--primary)}
+input:focus, select:focus, textarea:focus {border-color: var(--brand-2); box-shadow: var(--ring)}
+h1 {font-size: 32px; font-weight: 800; letter-spacing: -.035em}
+h2 {font-size: 18px; font-weight: 750}
+strong, b {font-weight: 700}
+
+/* The app's quiet navigation, with a desktop sidebar and mobile drawer. */
+.sidebar {border-right-color: var(--sidebar-line)}
+.brand img {border-radius: 12px}
+.brand-dot {color: var(--primary)}
+.nav button {border-radius: 14px; font-weight: 600; color: var(--sidebar-text)}
+.nav button:hover:not(.active) {background: var(--sidebar-card); color: var(--sidebar-text-bright)}
+.nav button.active {background: var(--primary-soft); color: var(--primary); box-shadow: none; font-weight: 750}
+.nav button.active::after {background: var(--primary)}
+.nav-count {background: var(--sidebar-card); color: var(--sidebar-text)}
+.nav button.active .nav-count {background: var(--surface); color: var(--primary)}
+.avatar {background: var(--primary-soft); color: var(--primary); border-radius: 12px}
+.user-copy b {color: var(--sidebar-text-bright)}
+.user-copy span {color: var(--sidebar-text)}
+.sidebar-footer button {color: var(--sidebar-text); background: var(--surface); border: 1px solid var(--sidebar-line); border-radius: 12px}
+.sidebar-footer button:hover {background: var(--sidebar-card); color: var(--sidebar-text-bright)}
+.topbar, body.dark .topbar {background: var(--header-bg); border-color: var(--line)}
+.top-date {background: var(--surface-subtle); color: var(--muted)}
+
+/* Emerald actions and the app's soft segmented selectors. */
+.btn {border-radius: 14px; font-weight: 700; transition-duration: .18s}
+.btn.primary {background: linear-gradient(180deg, #128366, #0f6a52); color: #fff; box-shadow: 0 6px 16px -8px #0f6a5270}
+.btn.primary:hover {background: linear-gradient(180deg, #117e61, #0c5b46); color: #fff; box-shadow: var(--shadow-md)}
+body.dark .btn.primary {background: linear-gradient(180deg, #cdeea3, #b9e08f); color: #0d2a1f; box-shadow: var(--shadow)}
+body.dark .btn.primary:hover {background: linear-gradient(180deg, #ddf5bc, #c4e89e); color: #0d2a1f}
+.btn:active {transform: scale(.98)}
+.btn.danger:hover {color: var(--surface); box-shadow: none}
+body.dark .btn.danger:hover {color: #321710}
+.skip-link, .skip {color: var(--on-primary); box-shadow: var(--shadow)}
+.segmented, body.dark .segmented {background: color-mix(in srgb, var(--line) 70%, var(--bg)); border-color: var(--line); border-radius: 14px}
+.segmented button {border-radius: 10px; font-weight: 650}
+.segmented button.selected {background: var(--surface); color: var(--primary); box-shadow: var(--shadow-sm)}
+.segment-marker {background: var(--surface); border-color: var(--line)}
+.switch {background: var(--line-hover)}
+.switch[aria-checked=true] {background: var(--primary)}
+body.dark .switch[aria-checked=true]::after {background: #0d2a1f}
+.pill {border-radius: 9px}
+
+/* Sage surfaces and forest balance cards match the phone's principal panel. */
+.card {border-radius: 22px; box-shadow: var(--shadow)}
+.hero, .detail-principal, .form-preview {
+  background: radial-gradient(circle at 92% 8%, #d9f27a38, transparent 42%),
+    radial-gradient(circle at 0 110%, #2fa77a40, transparent 55%),
+    linear-gradient(140deg, #0c3a2d, #10513f 55%, #17694f);
+  color: #fff; border-color: #ffffff14; border-radius: 24px;
+  box-shadow: 0 14px 32px -16px #0c3a2d70;
+}
+.hero-label, .hero-bottom small, .detail-principal > small,
+.form-preview > span, .form-preview > p, .form-preview dt {color: #d3e6da}
+.hero .pill {background: #ffffff14; color: #effad0; border-color: #ffffff2e}
+.hero .value {overflow-wrap: anywhere}
+.hero-label .self-tag {color: #effad0; border-color: #ffffff2e}
+.form-preview strong, .form-preview dd, .form-preview .value {color: #fff}
+.form-preview .preview-dates, #asset-preview-dates {border-color: #ffffff26}
+.metric {background: var(--surface)}
+.metric-icon {background: var(--success-soft); color: var(--success); border-radius: 12px}
+.metric-icon.lavender {background: var(--purple-soft); color: var(--purple)}
+.chart-bar {background: linear-gradient(0deg, var(--primary), var(--brand-2))}
+.chart-column:hover .chart-bar, .chart-column:focus-visible .chart-bar {background: linear-gradient(0deg, var(--primary-active), var(--brand-2))}
+.chart-legend i {background: var(--primary)}
+.chart-tip {background: #102d22; border-color: #ffffff20; box-shadow: var(--shadow-md)}
+.chart-tip::after {border-top-color: #102d22}
+.forecast-charts, body.dark .forecast-charts {--forecast-line: var(--primary); --forecast-tax: var(--warning)}
+.live-border {display: none}
+
+/* Forms, payment states and calendar use the same app controls. */
+input, select, textarea {border-radius: 14px; border-color: var(--line); background-color: var(--surface)}
+.custom-term {background: var(--primary-soft); border: 1px solid var(--line); border-radius: 16px; padding: 16px}
+.day:hover {border-color: var(--brand-2)}
+.day.today .day-number {color: var(--on-primary)}
+.day.selected {box-shadow: inset 0 0 0 1px var(--primary)}
+dialog {background: var(--surface-subtle); border-color: var(--line); border-radius: 28px}
+dialog::backdrop {background: #0b2119a6}
+.modal-header {background: var(--surface-subtle); border-color: var(--line)}
+.modal-close {border-radius: 50%; background: var(--primary-soft); color: var(--ink)}
+.bank-account-card {background: var(--surface); border-radius: 20px}
+.bank-options-button {border-radius: 12px}
+.bank-number-detail {background: var(--primary-soft); border-radius: 12px; padding: 10px 12px}
+.bank-account-details > .bank-number-detail dt {margin-bottom: 4px}
+.bank-number-detail dd {color: var(--ink)}
+#toast {background: #102d22; color: #ecf5ee; border-color: #ffffff20; box-shadow: var(--shadow-md)}
+
+/* The linked legal pages share the theme without loading account records. */
+.site-header {background: var(--header-bg); border-color: var(--line)}
+.main-nav a[aria-current='page'], .legal-symbol {box-shadow: none}
+.legal-body p a {text-decoration-color: var(--primary)}
+.legal-body code {border-color: var(--line-hover); background: var(--primary-soft)}
+.site-footer {background: var(--surface-subtle); border-color: var(--line)}
+
+@media (max-width: 700px) {
+  h1 {font-size: 28px}
+  .btn, .icon-button, .segmented button {min-height: 44px}
+  .card {border-radius: 20px}
+  .hero {border-radius: 24px}
+  .summary-grid {grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px}
+  .summary-grid > .hero {grid-column: 1 / -1}
+  .summary-grid > .metric {min-height: 160px; padding: 16px}
+  .summary-grid > .metric > .value {font-size: 22px; overflow-wrap: anywhere}
+  .calendar-layout > .card {padding: 16px}
+  .calendar-grid {gap: 4px}
+  .day {min-height: 60px; padding: 6px 2px}
+  dialog {border-radius: 26px 26px 0 0}
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .card, .nav button {transition: none}
+  .btn:active {transform: none}
+}

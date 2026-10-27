@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-27T19:38:45.758Z",
+  "title": "Design System: Depositly app theme",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Emerald",
+        "tonalRamp": [
+          "#0a1511",
+          "#0c3a2d",
+          "#10513f",
+          "#0f6a52",
+          "#14876a",
+          "#8fd4a8",
+          "#b9e08f",
+          "#e4f2ea"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Sage canvas"
+      },
+      "dark-primary": {
+        "role": "primary",
+        "displayName": "Dark-mode lime"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page headline",
+        "purpose": "Workspace page titles;28px at700px and below."
+      },
+      "body": {
+        "displayName": "Working text",
+        "purpose": "General interface text; compact labels retain their component sizes."
+      }
+    },
+    "shadows": [
+      {
+        "name": "working-surface",
+        "value": "0 1px 2px #10382a0d, 0 4px 14px -6px #10382a1f",
+        "purpose": "Light working cards."
+      },
+      {
+        "name": "working-surface-dark",
+        "value": "0 1px 2px #00000040, 0 6px 18px -8px #00000080",
+        "purpose": "Dark working cards."
+      },
+      {
+        "name": "forest-panel",
+        "value": "0 14px 32px -16px #0c3a2d70",
+        "purpose": "Principal and form-preview panels."
+      },
+      {
+        "name": "focus-ring-light",
+        "value": "0 0 0 3px #14876a40",
+        "purpose": "Light input focus."
+      },
+      {
+        "name": "focus-ring-dark",
+        "value": "0 0 0 3px #b9e08f40",
+        "purpose": "Dark input focus."
+      }
+    ],
+    "motion": [
+      {
+        "name": "app-ease",
+        "value": "cubic-bezier(.2,.7,.2,1)",
+        "purpose": "The app theme easing token."
+      },
+      {
+        "name": "button-state",
+        "value": ".18s",
+        "purpose": "Short button state transitions; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "workspace-stacked",
+        "value": "1020px"
+      },
+      {
+        "name": "navigation-drawer",
+        "value": "768px"
+      },
+      {
+        "name": "app-mobile-theme",
+        "value": "700px"
+      },
+      {
+        "name": "small-phone",
+        "value": "480px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button — light",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Emerald action in the light theme.",
+      "html": "<button class=\"ds-primary\">Save deposit</button>",
+      "css": ".ds-primary{padding:10px 18px;min-height:44px;border:0;border-radius:14px;background:linear-gradient(180deg,#128366,#0f6a52);color:#fff;font:700 13px Manrope,system-ui,sans-serif;box-shadow:0 6px 16px -8px #0f6a5270;cursor:pointer;transition:background .18s,transform .18s}.ds-primary:hover{background:linear-gradient(180deg,#117e61,#0c5b46)}.ds-primary:focus-visible{outline:2px solid var(--primary,#0f6a52);outline-offset:3px}.ds-primary:active{transform:scale(.98)}.ds-primary:disabled{opacity:.55;cursor:not-allowed;transform:none}"
+    },
+    {
+      "name": "Primary button — dark",
+      "kind": "button",
+      "refersTo": "button-primary-dark",
+      "description": "Lime action with dark green text in the dark theme.",
+      "html": "<button class=\"ds-primary-dark\">Save deposit</button>",
+      "css": ".ds-primary-dark{padding:10px 18px;min-height:44px;border:0;border-radius:14px;background:linear-gradient(180deg,#cdeea3,#b9e08f);color:#0d2a1f;font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;transition:background .18s,transform .18s}.ds-primary-dark:hover{background:linear-gradient(180deg,#ddf5bc,#c4e89e)}.ds-primary-dark:focus-visible{outline:2px solid #b9e08f;outline-offset:3px}.ds-primary-dark:active{transform:scale(.98)}.ds-primary-dark:disabled{opacity:.55;cursor:not-allowed;transform:none}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Surface action for secondary operations.",
+      "html": "<button class=\"ds-secondary\">Cancel</button>",
+      "css": ".ds-secondary{padding:10px 18px;min-height:44px;border:1px solid var(--line,#e0e8e1);border-radius:14px;background:var(--surface,#fff);color:var(--ink,#10261f);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;transition:background .18s,transform .18s}.ds-secondary:hover{background:var(--surface-subtle,#f7faf6);border-color:var(--line-hover,#aec9b9)}.ds-secondary:focus-visible{outline:2px solid var(--primary,#0f6a52);outline-offset:3px}.ds-secondary:active{transform:scale(.98)}.ds-secondary:disabled{opacity:.55;cursor:not-allowed;transform:none}"
+    },
+    {
+      "name": "Text input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Surface input with the app focus ring.",
+      "html": "<label class=\"ds-label\">Investment name<input class=\"ds-input\" placeholder=\"Enter a name\"></label>",
+      "css": ".ds-label{display:grid;gap:7px;color:var(--muted,#566a62);font:600 13px Manrope,system-ui,sans-serif}.ds-input{padding:10px 14px;min-height:44px;border:1px solid var(--line,#e0e8e1);border-radius:14px;background:var(--surface,#fff);color:var(--ink,#10261f);font:400 13px Manrope,system-ui,sans-serif;caret-color:var(--primary,#0f6a52);transition:border-color .2s,box-shadow .2s}.ds-input::placeholder{color:var(--muted,#566a62)}.ds-input:hover{border-color:var(--line-hover,#aec9b9)}.ds-input:focus{outline:none;border-color:var(--brand-2,#14876a);box-shadow:var(--ring,0 0 0 3px #14876a40)}.ds-input:disabled{opacity:.55}"
+    },
+    {
+      "name": "Selected navigation",
+      "kind": "nav",
+      "refersTo": "nav-active",
+      "description": "Primary text on a soft selected background.",
+      "html": "<nav aria-label=\"Workspace\"><button class=\"ds-nav\" aria-current=\"page\">Dashboard</button></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;width:100%;text-align:left;padding:11px 14px;min-height:46px;border:0;border-radius:14px;background:var(--primary-soft,#e4f2ea);color:var(--primary,#0f6a52);font:750 13px Manrope,system-ui,sans-serif;cursor:pointer;transition:background .18s}.ds-nav:hover{background:var(--sidebar-card,#e4f2ea)}.ds-nav:focus-visible{outline:2px solid var(--primary,#0f6a52);outline-offset:3px}.ds-nav:active{opacity:.8}"
+    },
+    {
+      "name": "Status pill",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "Compact semantic label used beside investment data.",
+      "html": "<span class=\"ds-pill\">Fixed deposit</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:9px;background:var(--primary-soft,#e4f2ea);color:var(--primary,#0f6a52);font:650 11px Manrope,system-ui,sans-serif;white-space:nowrap}"
+    },
+    {
+      "name": "Working card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Rounded bordered working surface with low elevation.",
+      "html": "<section class=\"ds-card\"><h3>Deposit details</h3><p>Account and payout information</p></section>",
+      "css": ".ds-card{padding:26px;border:1px solid var(--line,#e0e8e1);border-radius:22px;background:var(--surface,#fff);color:var(--ink,#10261f);box-shadow:var(--shadow,0 1px 2px #10382a0d,0 4px 14px -6px #10382a1f);font:400 15px/1.6 Manrope,system-ui,sans-serif}.ds-card h3{margin:0 0 8px;font-size:14px;font-weight:650}.ds-card p{margin:0;color:var(--muted,#566a62)}"
+    },
+    {
+      "name": "Principal panel",
+      "kind": "custom",
+      "description": "The forest panel shared by principal balances and deposit previews.",
+      "html": "<section class=\"ds-principal\"><small>Investment principal</small><strong>100,000</strong></section>",
+      "css": ".ds-principal{padding:24px;border:1px solid #ffffff14;border-radius:24px;background:radial-gradient(circle at 92% 8%,#d9f27a38,transparent 42%),radial-gradient(circle at 0 110%,#2fa77a40,transparent 55%),linear-gradient(140deg,#0c3a2d,#10513f 55%,#17694f);color:#fff;box-shadow:0 14px 32px -16px #0c3a2d70;font-family:Manrope,system-ui,sans-serif}.ds-principal small{display:block;color:#d3e6da;font-size:11px}.ds-principal strong{display:block;margin-top:14px;font-size:36px;font-weight:800;letter-spacing:-.035em;font-variant-numeric:tabular-nums}"
+    }
+  ],
+  "narrative": {
+    "northStar": "App theme parity",
+    "overview": "The website uses the existing Android app's identity: sage working surfaces, emerald actions, forest principal panels and lime accents. The desktop workspace remains a working deposit tracker with its established navigation, tables, filters and forms.\n\nThe normative theme is `assets/app-theme.css`, loaded after the component styles on the workspace and policy pages. Its reference is the Android Build 15 theme in `E:/Github/Depositly/app/assets/redesign.css`. Existing product behavior remains defined outside this visual system.",
+    "keyCharacteristics": [
+      "Sage surfaces and emerald actions in light mode.",
+      "Deep green surfaces and lime actions in dark mode.",
+      "One Manrope family for interface text, with tabular money figures.",
+      "Rounded controls and a forest principal panel shared by balances and form previews."
+    ],
+    "rules": [
+      {
+        "name": "The Theme Source Rule",
+        "body": "Extend the semantic properties in `assets/app-theme.css`; base-layer azure values are not the current palette.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do preserve the supplied Depositly logo, bank artwork and publisher credit.",
+      "Do use the shared theme properties for light and dark states, including hover and focus.",
+      "Do retain the website's established working layouts and financial behavior."
+    ],
+    "donts": [
+      "Don't introduce new azure accents from the superseded base styles.",
+      "Don't turn legacy uppercase section labels into a new decorative heading convention.",
+      "Don't replace exact financial text with decorative graphics or hide it to make a layout fit."
+    ]
+  }
+}

@@ -35,7 +35,7 @@ Users enter records in the browser or transfer Android-compatible backups throug
 
 ## Brand Commitments
 
-Preserve the Depositly name and supplied logo, Greenstone Solutions LLC publisher credit, support contact, and legal facts. Replace the existing visual design across the site. Use clear, specific interface copy.
+Preserve the Depositly name and supplied logo, Greenstone Solutions LLC publisher credit, support contact, and legal facts. Follow the Android app's emerald actions, sage surfaces, lime accents and deep green dark mode while retaining the website's working layouts and features. Use clear, specific interface copy.
 
 ## Evidence on Hand
 

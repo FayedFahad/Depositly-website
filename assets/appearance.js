@@ -6,7 +6,7 @@ export function storedAppearance(){
 
 export function applyAppearance(dark){
  document.body.classList.toggle('dark',!!dark);
- document.querySelector('meta[name="theme-color"]')?.setAttribute('content',dark?'#070b12':'#f8fafc');
+ document.querySelector('meta[name="theme-color"]')?.setAttribute('content',dark?'#0a1511':'#f2f6f1');
  try{localStorage.setItem(preferenceKey,dark?'dark':'light');}catch{}
 }
 
