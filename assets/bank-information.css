@@ -61,6 +61,10 @@
 .bank-share-field { margin-top: 22px; }
 .bank-share-field textarea { min-height: 220px; line-height: 1.8; font-variant-numeric: tabular-nums; }
 .bank-backup-caption { margin: 0 0 18px; font-size: 12px; }
+.bank-balance-detail { grid-column: 1 / -1; }
+.bank-balance-detail dd { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bank-balance-detail dd > span { font-size: 18px; overflow-wrap: anywhere; }
+.bank-balance-detail .text-button { min-height: 44px; flex: none; }
 @media (min-width: 700px) { .bank-layout-card .bank-number-detail, .bank-layout-list .bank-number-detail { grid-column: auto; } }
 @media (min-width: 1000px) { .bank-layout-grid .bank-group-accounts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); } }
 @media (max-width: 600px) {

@@ -205,6 +205,17 @@ body.dark .switch[aria-checked=true]::after {background: #0d2a1f}
 .hero .pill {background: #ffffff14; color: #effad0; border-color: #ffffff2e}
 .hero .value {overflow-wrap: anywhere}
 .hero-label .self-tag {color: #effad0; border-color: #ffffff2e}
+.hero-balances {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; height: 33.6px; min-height: 33.6px}
+.hero-balances > div {min-width: 0; container-type: inline-size}
+.hero-balances > div:nth-child(2) {text-align: center}
+.hero-balances > div:nth-child(3) {text-align: right}
+.hero-balances small, .hero-balances b {display: block; white-space: nowrap; overflow-wrap: normal}
+.hero-balances small {font-size: clamp(5px, calc((100vw - 120px) / var(--balance-label-chars, 20) * .45), 11px); line-height: 15.4px}
+.hero-balances b {font-size: clamp(5px, calc((100vw - 120px) / var(--balance-chars, 10) * .45), 13px); line-height: 18.2px; color: #fff; font-variant-numeric: tabular-nums}
+@supports (container-type: inline-size) {
+  .hero-balances small {font-size: clamp(5px, calc(160cqi / var(--balance-label-chars, 20)), 11px)}
+  .hero-balances b {font-size: clamp(5px, calc(160cqi / var(--balance-chars, 10)), 13px)}
+}
 .form-preview strong, .form-preview dd, .form-preview .value {color: #fff}
 .form-preview .preview-dates, #asset-preview-dates {border-color: #ffffff26}
 .metric {background: var(--surface)}

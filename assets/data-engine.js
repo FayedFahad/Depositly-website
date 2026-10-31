@@ -83,7 +83,7 @@ const isObject=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function validDate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&root.FDR.iso(root.FDR.parse(s))===s&&s>='1900-01-01'&&s<='2199-12-31';}
 function text(v,max,optional=false){return (optional&&v===undefined)||(typeof v==='string'&&v.length<=max);}
 function bankText(value,max,optional=false){return optional&&value===undefined||typeof value==='string'&&value.length<=max&&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(value)&&(optional||value.trim().length>0);}
-function validBankAccount(a){return isObject(a)&&typeof a.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(a.id)&&bankText(a.bankId,100,true)&&bankText(a.bankName,150)&&bankText(a.accountTitle,120)&&bankText(a.accountNumber,100)&&bankText(a.branchName,150)&&bankText(a.routingNumber,100)&&bankText(a.accountType,100,true);}
+function validBankAccount(a){return isObject(a)&&typeof a.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(a.id)&&bankText(a.bankId,100,true)&&bankText(a.bankName,150)&&bankText(a.accountTitle,120)&&bankText(a.accountNumber,100)&&bankText(a.branchName,150)&&bankText(a.routingNumber,100)&&bankText(a.accountType,100,true)&&(a.balance===undefined||Number.isSafeInteger(a.balance)&&a.balance>=0&&a.balance<=MAX_MONEY);}
 function validBankAccountId(value){return value===undefined||typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value);}
 function validBankAccountSnapshot(value){return isObject(value)&&bankText(value.bankName,150)&&bankText(value.accountTitle,120)&&bankText(value.accountNumber,100);}
 function validReceivingAccount(meta){return validBankAccountId(meta.bankAccountId)&&(meta.bankAccountSnapshot===undefined||meta.bankAccountId!==undefined&&validBankAccountSnapshot(meta.bankAccountSnapshot));}
@@ -142,14 +142,14 @@ function exportData(state,selectedIds,now=new Date().toISOString()){
 }
 const equivalent=(a,b)=>JSON.stringify([a.type,a.interestType||'simple',a.name,a.principal,a.rate,a.tds,root.FDR.periodSpec(a),a.start,a.first,a.maturity,a.reference||'',a.notes||'',a.bankId||'',a.bankName||'',a.bankAccountId||'',a.ownership||'self',a.ownerName||'',!!a.autoRenew,a.renewalStop||'',a.autoRenew?a.tenureCount||null:null,a.autoRenew?a.tenureUnit||null:null])===JSON.stringify([b.type,b.interestType||'simple',b.name,b.principal,b.rate,b.tds,root.FDR.periodSpec(b),b.start,b.first,b.maturity,b.reference||'',b.notes||'',b.bankId||'',b.bankName||'',b.bankAccountId||'',b.ownership||'self',b.ownerName||'',!!b.autoRenew,b.renewalStop||'',b.autoRenew?b.tenureCount||null:null,b.autoRenew?b.tenureUnit||null:null]);
 function merge(current,incoming,preview=false){
- const currencyMismatch=!!current.assets.length&&!!incoming.assets.length&&normalizedCurrency(current.currency)!==normalizedCurrency(incoming.currency);
+ const hasMoney=data=>!!data.assets.length||(data.bankAccounts||[]).some(a=>a.balance!==undefined),currentMoney=hasMoney(current),incomingMoney=hasMoney(incoming),currencyMismatch=currentMoney&&incomingMoney&&normalizedCurrency(current.currency)!==normalizedCurrency(incoming.currency);
  if(currencyMismatch&&!preview)throw Error('Currencies differ. Select '+normalizedCurrency(incoming.currency)+' in Settings before merging, or replace using the file’s currency. Amounts are not converted.');
  const result=JSON.parse(JSON.stringify(current)),byId=new Map(result.assets.map(a=>[a.id,a]));let added=0,duplicates=0,conflicts=0,payments=0,paymentConflicts=0,bankAdded=0,bankDuplicates=0,bankConflicts=0;
  result.bankAccounts=result.bankAccounts||[];
- const banksById=new Map(result.bankAccounts.map(a=>[a.id,a])),bankFields=['bankId','bankName','accountTitle','accountNumber','branchName','routingNumber','accountType'];
- for(const a of incoming.bankAccounts||[]){const old=banksById.get(a.id);if(!old){const copy={...a};result.bankAccounts.push(copy);banksById.set(a.id,copy);bankAdded++;}else if(bankFields.every(field=>(old[field]||'')===(a[field]||'')))bankDuplicates++;else bankConflicts++;}
+ const banksById=new Map(result.bankAccounts.map(a=>[a.id,a])),bankFields=['bankId','bankName','accountTitle','accountNumber','branchName','routingNumber','accountType','balance'],bankValue=(a,field)=>a[field]??(field==='balance'?0:'');
+ for(const a of incoming.bankAccounts||[]){const old=banksById.get(a.id);if(!old){const copy={...a};result.bankAccounts.push(copy);banksById.set(a.id,copy);bankAdded++;}else if(bankFields.every(field=>bankValue(old,field)===bankValue(a,field)))bankDuplicates++;else bankConflicts++;}
  if(result.bankAccounts.length>500)throw Error('Import would exceed the 500-bank-account limit.');
- result.currency=normalizedCurrency(current.assets.length||!incoming.assets.length?current.currency:incoming.currency);result.numberFormat=current.numberFormat||incoming.numberFormat||'south-asian';
+ result.currency=normalizedCurrency(currentMoney||!incomingMoney?current.currency:incoming.currency);result.numberFormat=current.numberFormat||incoming.numberFormat||'south-asian';
  const accepted=new Set();
  for(const a of incoming.assets){let old=byId.get(a.id);if(!old){result.assets.push(a);byId.set(a.id,a);accepted.add(a.id);added++;}else if(equivalent(old,a)){accepted.add(a.id);duplicates++;}else conflicts++;}
  if(result.assets.length>500)throw Error('Import would exceed the 500-investment limit.');
@@ -168,11 +168,11 @@ function instrumentCSV(state,selectedIds){
  for(const a of assets){let p=root.FDR.periodSpec(a),label=a.autoRenew&&root.FDR.legacyRenewal(a)?'Auto-renew 100 Days':a.cycleUnit!==undefined&&!((p.unit==='months'&&[1,3,6,12].includes(p.count))||(p.unit==='days'&&p.count===100))?'Custom '+p.count+' '+p.unit:cycleNames[a.cycle],type=a.type==='NSC'?'National Savings Certificate':a.type;rows.push([a.id,(a.bankAccountId?'Linked ':'')+(a.interestType==='compound'?'Compound ':'')+type,a.name,a.ownerName||'',a.ownership==='others'?'Others':'Self',a.bankId||'',a.bankName||'',a.reference||'',a.principal/100,a.rate,a.tds,label,a.start,a.maturity,root.FDR.difference(a.first,a.start),a.notes||'',a.cycleUnit||'',a.tenureCount||'',a.tenureUnit||'',a.autoRenew===undefined?'':a.autoRenew?'Yes':'No',a.renewalStop?root.FDR.renewalTerm(a,a.renewalStop):'',normalizedCurrency(state.currency),a.bankAccountId||'',a.interestType==='compound'?'Compound':'Simple',...extras.map(h=>{let columns=a.csvColumns||{},key=Object.keys(columns).find(k=>k.trim().toLowerCase()===h.trim().toLowerCase());return columns[key]??'';})]);}
  return csv(rows);
 }
-function parseCSV(input){
+function parseCSV(input,maxRows=501){
  if(typeof input!=='string'||input.length>20000000)throw Error('CSV file is too large.');
  let rows=[],row=[],cell='',quoted=false,closed=false;input=input.replace(/^\ufeff/,'');
  const endCell=()=>{row.push(cell);cell='';closed=false;if(row.length>128)throw Error('CSV has too many columns.');};
- const endRow=()=>{endCell();if(row.some(c=>c.trim()))rows.push(row);row=[];if(rows.length>501)throw Error('CSV exceeds the 500-investment limit.');};
+ const endRow=()=>{endCell();if(row.some(c=>c.trim()))rows.push(row);row=[];if(rows.length>maxRows)throw Error('CSV exceeds the allowed record limit.');};
  for(let i=0;i<input.length;i++){let c=input[i];if(quoted){if(c==='"'){if(input[i+1]==='"'){cell+='"';i++;}else{quoted=false;closed=true;}}else cell+=c;continue;}
   if(c===','){endCell();continue;}if(c==='\r'||c==='\n'){if(c==='\r'&&input[i+1]==='\n')i++;endRow();continue;}
   if(closed){if(c===' '||c==='\t')continue;throw Error('Invalid text after a quoted CSV field.');}
@@ -181,6 +181,125 @@ function parseCSV(input){
  if(quoted)throw Error('CSV has an unfinished quoted field.');if(cell.length||row.length||closed)endRow();
  if(!rows.length)throw Error('CSV is empty.');return rows;
 }
+// Read older Build 16 combined backups; new exports use separate named columns.
+const BACKUP_COLUMNS=['Depositly CSV backup version','Field path','Value type','Value'];
+const unescapeCSV=s=>s.startsWith("''")||(s.startsWith("'")&&/^[\s]*[=+@-]/.test(s.slice(1)))?s.slice(1):s;
+function readBackupCSV(input){
+ const rows=parseCSV(input,1000000).map(row=>row.map(unescapeCSV));
+ if(rows.shift().join('\0')!==BACKUP_COLUMNS.join('\0'))throw Error('Invalid CSV backup columns.');
+ const nodes=new Map();let data;
+ for(const row of rows){
+  if(row.length!==4)throw Error('Invalid CSV backup row.');
+  const [version,path,type,raw]=row;if(version!=='1')throw Error('This CSV backup needs a newer version of Depositly.');
+  if(nodes.has(path)||path.split('/').length>41)throw Error('Duplicate or deeply nested CSV backup field.');
+  let value,count=0;
+  if(type==='object'||type==='array'){if(!/^(0|[1-9]\d*)$/.test(raw)||Number(raw)>1000000)throw Error('Invalid CSV container size.');count=Number(raw);value=type==='array'?[]:{};}
+  else if(type==='string')value=raw;
+  else if(type==='number'){if(!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(raw)||!Number.isFinite(Number(raw)))throw Error('Invalid number in CSV backup.');value=Number(raw);}
+  else if(type==='boolean'&&(raw==='true'||raw==='false'))value=raw==='true';
+  else if(type==='null'&&raw==='')value=null;
+  else throw Error('Invalid CSV backup value type.');
+  if(path===''){if(nodes.size||type!=='object')throw Error('Invalid CSV backup root.');data=value;}
+  else {
+   const slash=path.lastIndexOf('/'),parent=nodes.get(path.slice(0,slash)),encoded=path.slice(slash+1);
+   if(slash<0||!parent||!['object','array'].includes(parent.type)||/~(?![01])/.test(encoded))throw Error('Invalid CSV backup field path.');
+   const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~');
+   if(Object.prototype.hasOwnProperty.call(parent.value,key)||parent.type==='array'&&(!/^(0|[1-9]\d*)$/.test(key)||Number(key)!==parent.seen))throw Error('Duplicate or invalid CSV backup field.');
+   Object.defineProperty(parent.value,key,{value,enumerable:true,writable:true,configurable:true});parent.seen++;
+  }
+  nodes.set(path,{value,type,count,seen:0});
+ }
+ if(!data||[...nodes.values()].some(n=>['object','array'].includes(n.type)&&n.count!==n.seen)||data.scope!=='all'||!Array.isArray(data.bankAccounts))throw Error('CSV backup is incomplete.');
+ if(data.notificationSettings&&(!isObject(data.notificationSettings)||typeof data.notificationSettings.enabled!=='boolean'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.notificationSettings.time)))throw Error('Invalid reminder settings in CSV backup.');
+ return migrate(data);
+}
+function isBackupCSV(input){return input.replace(/^\ufeff/,'').startsWith('"'+BACKUP_COLUMNS[0]+'"')||input.replace(/^\ufeff/,'').startsWith(BACKUP_COLUMNS[0]+',');}
+// Each row uses named field columns. A deposit repeats when it has multiple receipts.
+const DEPOSIT_FIELDS=[['Deposit ID','id'],['Deposit type','type','type'],['Investment name','name'],["Owner's name",'ownerName'],['Ownership','ownership','ownership'],['Bank ID','bankId'],['Bank name','bankName'],['Deposit / certificate number','reference'],['Principal','principal','money'],['Annual interest rate %','rate','number'],['TDS %','tds','number'],['Payout cycle value','cycle','number'],['Payout cycle unit','cycleUnit'],['Opening date','start'],['First payout date','first'],['Maturity date','maturity'],['Tenure value','tenureCount','optional-number'],['Tenure unit','tenureUnit'],['Automatic renewal','autoRenew','boolean'],['Renewal stop date','renewalStop'],['Receiving bank account ID','bankAccountId'],['Interest type','interestType'],['Notes','notes']];
+const RECEIPT_FIELDS=[['Receipt ID','id'],['Received amount','amount','money'],['Received date','date'],['Receipt notes','notes'],['Receipt investment name','name'],['Receipt investment type','type','type'],['Scheduled payment date','scheduledDate'],['Payment kind','kind'],['Gross interest','gross','money'],['Tax deducted','tax','money'],['Expected net amount','expected','money'],['Principal returned','principal','money'],['Receipt receiving bank account ID','bankAccountId'],['Receipt receiving bank name','bankName'],['Receipt receiving account title','accountTitle'],['Receipt receiving account number','accountNumber']];
+const BANK_FIELDS=[['Bank account ID','id'],['Bank ID','bankId'],['Bank name','bankName'],['Account title','accountTitle'],['Account number','accountNumber'],['Branch name','branchName'],['Routing number','routingNumber'],['Account type','accountType'],['Current balance','balance','money']];
+const DEPOSIT_SETTINGS=['Currency','Number format','Dark mode','Deposit view','Reminder enabled','Reminder time','Deposit count','Receipt count','CSV backup version'];
+const BANK_SETTINGS=['Bank view','Bank account count','Currency','CSV backup version'];
+const DEPOSIT_COLUMNS=[...DEPOSIT_FIELDS.map(f=>f[0]),...RECEIPT_FIELDS.map(f=>f[0]),...DEPOSIT_SETTINGS];
+const BANK_COLUMNS=[...BANK_FIELDS.map(f=>f[0]),...BANK_SETTINGS];
+function encodeCSVField(value,type){
+ if(value===undefined)return '';
+ if(type==='money')return value/100;
+ if(type==='boolean')return value?'Yes':'No';
+ if(type==='type')return value==='NSC'?'National Savings Certificate':value;
+ if(type==='ownership')return value==='others'?'Others':'Self';
+ return value;
+}
+function decodeCSVField(raw,type,label){
+ if(raw==='')return undefined;
+ if(type==='money'){if(!/^\d+(?:\.\d{1,2})?$/.test(raw))throw Error('Invalid '+label+' in CSV.');const value=Math.round(Number(raw)*100);if(!Number.isSafeInteger(value))throw Error('Invalid '+label+' in CSV.');return value;}
+ if(type==='number'||type==='optional-number'){if(!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(raw)||!Number.isFinite(Number(raw)))throw Error('Invalid '+label+' in CSV.');return Number(raw);}
+ if(type==='boolean'){if(!['Yes','No'].includes(raw))throw Error(label+' must be Yes or No.');return raw==='Yes';}
+ if(type==='type'){if(!['FDR','NSC','National Savings Certificate','Sanchaypatra'].includes(raw))throw Error('Invalid '+label+' in CSV.');return raw==='FDR'?'FDR':'NSC';}
+ if(type==='ownership'){if(!['Self','Others'].includes(raw))throw Error('Ownership must be Self or Others.');return raw.toLowerCase();}
+ return raw;
+}
+function fieldValues(value,fields){return fields.map(([,key,type])=>encodeCSVField(value[key],type));}
+function readFields(get,fields){const value={};for(const [label,key,type] of fields){const field=decodeCSVField(get(label),type,label);if(field!==undefined)value[key]=field;}return value;}
+function checkedCSV(rows){
+ if(rows[0].length>128)throw Error('Too many CSV columns.');
+ const result=csv(rows);let size=0;for(const char of result){const code=char.codePointAt(0);size+=code<128?1:code<2048?2:code<65536?3:4;if(size>20000000)throw Error('CSV backup is too large.');}return result;
+}
+function depositsCSV(state,notificationSettings){
+ const data=migrate(exportData(state)),n=notificationSettings||state.notificationSettings||{enabled:false,time:'09:00'},legacy=parseCSV(instrumentCSV(data)).map(row=>row.map(unescapeCSV));
+ const extras=legacy[0].slice(INSTRUMENT_COLUMNS.length),extraById=new Map(legacy.slice(1).map(row=>[row[0],row.slice(INSTRUMENT_COLUMNS.length)]));
+ const settings=[data.currency,data.numberFormat,data.dark?'Yes':'No',data.defaultDepositView,n.enabled?'Yes':'No',n.time||'09:00',data.assets.length,Object.keys(data.paid).length,2],rows=[[...DEPOSIT_COLUMNS,...extras.map(h=>'Extra: '+h)]];
+ const byAsset=new Map();for(const [id,r] of Object.entries(data.paid)){const assetId=id.split(':')[0];if(!byAsset.has(assetId))byAsset.set(assetId,[]);byAsset.get(assetId).push([id,r]);}
+ for(const a of data.assets){const receipts=byAsset.get(a.id)||[[null,null]];for(const [id,r] of receipts){const snapshot=r?.snapshot||{},account=snapshot.bankAccountSnapshot||{},receipt=r?{...snapshot,...account,id,amount:r.amount,date:r.date,notes:r.notes}:{};rows.push([...fieldValues(a,DEPOSIT_FIELDS),...fieldValues(receipt,RECEIPT_FIELDS),...settings,...extraById.get(a.id)]);}}
+ if(!data.assets.length)rows.push([...Array(DEPOSIT_FIELDS.length+RECEIPT_FIELDS.length).fill(''),...settings,...Array(extras.length).fill('')]);
+ return checkedCSV(rows);
+}
+function bankAccountsCSV(state){
+ const data=migrate(exportData(state)),settings=[['card','grid'].includes(state.bankInformationView)?state.bankInformationView:'card',data.bankAccounts.length,data.currency,2],rows=[BANK_COLUMNS];
+ for(const account of data.bankAccounts)rows.push([...fieldValues(account,BANK_FIELDS),...settings]);
+ if(!data.bankAccounts.length)rows.push([...Array(BANK_FIELDS.length).fill(''),...settings]);
+ return checkedCSV(rows);
+}
+function namedCSV(input,columns,maxRows,optionalColumns=[]){
+ const rows=parseCSV(input,maxRows).map(row=>row.map(unescapeCSV)),header=rows.shift(),names=header.map(h=>h.trim().toLowerCase());
+ if(new Set(names).size!==names.length)throw Error('CSV has duplicate column names.');
+ for(const column of columns)if(!optionalColumns.includes(column)&&!names.includes(column.toLowerCase()))throw Error('CSV is missing the '+column+' column.');
+ if(!rows.length)throw Error('CSV backup has no data or settings row.');
+ const extras=header.filter(h=>!columns.some(c=>c.toLowerCase()===h.trim().toLowerCase()));
+ if(extras.some(h=>!h.startsWith('Extra: ')||!h.slice(7).trim()))throw Error('CSV has an unrecognized column.');
+ return {extras,records:rows.map(row=>{if(row.length!==header.length)throw Error('CSV row has the wrong number of columns.');const get=name=>{const index=names.indexOf(name.toLowerCase());return index<0?'':row[index];};if(get('CSV backup version')!=='2')throw Error('This CSV backup needs a newer version of Depositly.');return get;})};
+}
+function readDepositsCSV(input){
+ const {extras,records}=namedCSV(input,DEPOSIT_COLUMNS,600501),byId=new Map(),paid={};let settings=null;
+ for(const get of records){
+  const current=DEPOSIT_SETTINGS.map(get);if(settings&&JSON.stringify(settings)!==JSON.stringify(current))throw Error('Deposit CSV rows have conflicting settings or totals.');settings=current;
+  const a=readFields(get,DEPOSIT_FIELDS),r=readFields(get,RECEIPT_FIELDS);
+  if(!a.id){if(records.length!==1||[...DEPOSIT_FIELDS,...RECEIPT_FIELDS].some(([h])=>get(h)!=='')||extras.some(h=>get(h)!==''))throw Error('A deposit is missing its ID.');continue;}
+  if(extras.length)a.csvColumns=Object.fromEntries(extras.map(h=>[h.slice(7),get(h)]));
+  const old=byId.get(a.id);if(old&&JSON.stringify(old)!==JSON.stringify(a))throw Error('Repeated deposit rows have conflicting fields.');byId.set(a.id,a);
+  if(byId.size>500)throw Error('CSV exceeds the 500-deposit limit.');
+  if(!r.id){if(RECEIPT_FIELDS.some(([h])=>get(h)!==''))throw Error('A receipt is missing its ID.');if(old)throw Error('A deposit row is duplicated without a receipt.');continue;}
+  if(Object.prototype.hasOwnProperty.call(paid,r.id))throw Error('Duplicate receipt ID in CSV.');
+  const snapshot={assetId:a.id,name:r.name,type:r.type,scheduledDate:r.scheduledDate,kind:r.kind,gross:r.gross,tax:r.tax,expected:r.expected,principal:r.principal};
+  if(r.bankAccountId!==undefined)snapshot.bankAccountId=r.bankAccountId;
+  if(r.bankName!==undefined||r.accountTitle!==undefined||r.accountNumber!==undefined)snapshot.bankAccountSnapshot={bankName:r.bankName,accountTitle:r.accountTitle,accountNumber:r.accountNumber};
+  paid[r.id]={amount:r.amount,date:r.date,...(r.notes!==undefined?{notes:r.notes}:{}),snapshot};
+ }
+ const [currency,numberFormat,dark,view,enabled,time,assetCount,receiptCount]=settings;
+ if(!['Yes','No'].includes(dark)||!['Yes','No'].includes(enabled)||!['card','grid'].includes(view)||!['south-asian','international'].includes(numberFormat)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('Invalid saved settings in deposit CSV.');
+ if(!/^(0|[1-9]\d*)$/.test(assetCount)||! /^(0|[1-9]\d*)$/.test(receiptCount)||Number(assetCount)!==byId.size||Number(receiptCount)!==Object.keys(paid).length)throw Error('Deposit CSV is incomplete: record counts do not match.');
+ return migrate({version:VERSION,assets:[...byId.values()],paid,bankAccounts:[],currency:normalizedCurrency(currency),numberFormat,dark:dark==='Yes',defaultDepositView:view,notificationSettings:{enabled:enabled==='Yes',time}});
+}
+function readBankAccountsCSV(input){
+ const {extras,records}=namedCSV(input,BANK_COLUMNS,501,['Current balance','Currency']),bankAccounts=[];let settings=null;
+ if(extras.length)throw Error('Unexpected bank CSV columns.');
+ for(const get of records){const current=BANK_SETTINGS.map(get);if(settings&&JSON.stringify(settings)!==JSON.stringify(current))throw Error('Bank CSV rows have conflicting settings or totals.');settings=current;const a=readFields(get,BANK_FIELDS);if(!a.id){if(records.length!==1||BANK_FIELDS.some(([h])=>get(h)!==''))throw Error('A bank account is missing its ID.');}else bankAccounts.push(a);}
+ const [view,count,currency]=settings;if(!['card','grid'].includes(view)||! /^(0|[1-9]\d*)$/.test(count)||Number(count)!==bankAccounts.length)throw Error('Bank CSV is incomplete or has invalid settings.');
+ if(!currency&&bankAccounts.some(a=>a.balance!==undefined))throw Error('Bank balances need a Currency column. Export the bank CSV again from an updated app.');
+ return migrate({version:VERSION,assets:[],paid:{},bankAccounts,bankInformationView:view,dark:false,...(currency?{currency:normalizedCurrency(currency)}:{})});
+}
+function csvKind(input){const header=parseCSV(input,1000000)[0].map(unescapeCSV).map(h=>h.trim().toLowerCase());return header.includes('deposit id')&&header.includes('csv backup version')?'deposits':header.includes('account number')&&header.includes('bank account id')&&header.includes('csv backup version')?'banks':isBackupCSV(input)?'backup-csv':'csv';}
+
 function readInstrumentCSV(input){
  const rows=parseCSV(input),unescape=s=>s.startsWith("''")||(s.startsWith("'")&&/^[\s]*[=+@-]/.test(s.slice(1)))?s.slice(1):s;
  const header=rows.shift().map(unescape),normalized=header.map(h=>h.trim().toLowerCase());
@@ -188,7 +307,7 @@ function readInstrumentCSV(input){
  const required=['Instrument type','Investment name','Annual interest rate %','TDS %','Payout cycle','Opening date','Maturity date'];
  for(const h of required)if(!normalized.includes(h.toLowerCase()))throw Error('Investment CSV is missing the '+h+' column. Export an investment CSV from the data manager.');
  const principalColumns=header.filter(isPrincipalColumn);if(principalColumns.length!==1)throw Error('CSV must contain one Principal column (older Principal BDT files are supported).');const principalColumn=principalColumns[0];let fileCurrency=null;
- if(header.some(isPaymentColumn))throw Error('Import an investment-only CSV without payment dates or payment amounts. Use JSON to restore receipt history.');
+ if(header.some(isPaymentColumn))throw Error('Import an investment-only CSV without payment dates or payment amounts, or a Deposits CSV backup.');
  const numeric=(value,label)=>{let v=value.trim().replace(/%$/,'');if(!/^\d+(?:\.\d+)?$/.test(v))throw Error('Invalid '+label+' in CSV.');return Number(v);};
  const stableId=a=>{let s=JSON.stringify(a),x=2166136261,y=5381;for(let i=0;i<s.length;i++){x=Math.imul(x^s.charCodeAt(i),16777619);y=Math.imul(y,33)^s.charCodeAt(i);}return 'csv'+(x>>>0).toString(36)+'_'+(y>>>0).toString(36);};
  const assets=rows.map((row,index)=>{
@@ -221,7 +340,7 @@ function readInstrumentCSV(input){
  });
  return migrate({version:VERSION,assets,paid:{},dark:false,currency:fileCurrency||'BDT'});
 }
-root.Transfer={FORMAT,VERSION,validDate,validAsset,validBankAccount,validBankAccountId,validBankAccountSnapshot,needsMigration,snapshot,migrate,exportData,merge,csv,INSTRUMENT_COLUMNS,instrumentCSV,readInstrumentCSV};if(typeof module!=='undefined')module.exports=root.Transfer;
+root.Transfer={FORMAT,VERSION,validDate,validAsset,validBankAccount,validBankAccountId,validBankAccountSnapshot,needsMigration,snapshot,migrate,exportData,merge,csv,INSTRUMENT_COLUMNS,instrumentCSV,readInstrumentCSV,BACKUP_COLUMNS,readBackupCSV,isBackupCSV,DEPOSIT_COLUMNS,BANK_COLUMNS,depositsCSV,bankAccountsCSV,readDepositsCSV,readBankAccountsCSV,csvKind};if(typeof module!=='undefined')module.exports=root.Transfer;
 })(engineRoot);
 
 // These exports retain Android's integer-paisa arithmetic and interchange format.
@@ -241,6 +360,14 @@ export const today = () => FDR.iso(new Date());
 export const isSelf = asset => asset.ownership !== 'others';
 export const compareName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'en', {numeric: true, sensitivity: 'base'});
 export const emptyState = () => ({version: 2, assets: [], paid: {}, bankAccounts: [], dark: false, currency: 'BDT', numberFormat: 'south-asian', defaultDepositView: 'card'});
+export const bankAccountBalance = account => account.balance ?? 0;
+export function parseBankBalance(value) {
+  const text = String(value ?? '').trim();
+  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) throw Error('Enter a balance of zero or more with up to two decimal places.');
+  const [whole, fraction = ''] = text.split('.'), amount = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  if (!Number.isSafeInteger(amount) || amount > MAX_MONEY) throw Error('The bank balance is too large.');
+  return amount;
+}
 export function formatMoney(paisa, state = emptyState()) {
   const code = state.currency || 'BDT';
   const symbol = CurrencyOptions.find(row => row[0] === code)?.[2] || code + ' ';
@@ -385,7 +512,9 @@ export function summary(state, on = today()) {
   const paid = all.filter(event => state.paid[event.id]);
   const received = paid.reduce((sum, event) => sum + state.paid[event.id].amount, 0);
   const interestReceived = paid.filter(event => !event.principal).reduce((sum, event) => sum + state.paid[event.id].amount, 0);
-  return {principal, fdr, nsc, balanceErrors, activeCount: active.length, totalCount: state.assets.length, through: eventHorizon(on),
+  const bank = (state.bankAccounts || []).reduce((sum, account) => sum + bankAccountBalance(account), 0);
+  const total = principal === null || !Number.isSafeInteger(principal + bank) ? null : principal + bank;
+  return {principal, fdr, nsc, bank, total, balanceErrors, activeCount: active.length, totalCount: state.assets.length, through: eventHorizon(on),
     monthlyIncome: forecast(state, 30, on).net, received, interestReceived, principalReceived: received - interestReceived,
     upcoming, overdue, next30, next30Interest: next30.filter(event => !event.principal).reduce((sum, event) => sum + event.net, 0), next30Total: next30.reduce((sum, event) => sum + event.net, 0),
     allocations: [{type: 'FDR', principal: fdr, percent: principal ? fdr / principal * 100 : 0}, {type: 'NSC', principal: nsc, percent: principal ? nsc / principal * 100 : 0}]};

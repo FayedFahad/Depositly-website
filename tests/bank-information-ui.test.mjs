@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {setImmediate as nextTurn} from 'node:timers/promises';
 import {accountWorkspaceKey, ACCOUNT_WORKSPACE_PREFIX} from '../assets/account-workspaces.js';
-import {emptyState, Transfer} from '../assets/data-engine.js';
+import {emptyState, Transfer, formatMoney} from '../assets/data-engine.js';
 import {AUTH_EVENT_KEY} from '../assets/cloud-sync.js';
 
 const alice={sub:'bank-ui-alice',name:'Alice Example',email:'alice@example.com'};
@@ -249,4 +249,28 @@ test('stale linked-deposit actions and account-selection forms cannot cross acco
  const linked={...deposit,id:alice.sub,bankAccountId:account.id},app=await boot(context,{banks:[account],assets:[linked]});await app.click({action:'bank-account-detail',id:account.id});const staleAction={...app.actionData('linked-deposit',linked.id)};
  app.node('asset-form').elements={namedItem:id=>app.node(id)};await app.click({action:'edit',id:linked.id});const staleForm=app.makeForm('asset-form',depositValues({bankAccountId:account.id}));await app.switchToBob();
  await app.click(staleAction);assert.equal(app.node('modal').open,false);await app.dispatch('submit',{target:staleForm,preventDefault(){}});assert.equal(app.saved().assets[0].name,'BOB_PRIVATE_DEPOSIT');assert(!Object.hasOwn(app.saved().assets[0],'bankAccountId'));assert.equal(app.saved().bankAccounts[0].accountTitle,'Bob Example');
+});
+
+test('dashboard keeps one horizontal three-category balance row and includes saved bank funds',async context=>{
+ const app=await boot(context,{banks:[{...account,balance:250050}]});
+ const hero=app.node('app').innerHTML.match(/<section class="card hero"[\s\S]*?<\/section>/)?.[0];assert(hero);assert.match(hero,/Your current balance/);assert(hero.includes(formatMoney(1250050)));
+ const row=hero.match(/<div class="hero-bottom hero-balances">([\s\S]*)<\/div>/)?.[1];assert(row);assert.equal((row.match(/<small>/g)||[]).length,3);assert(row.indexOf('Fixed deposits')<row.indexOf('Savings certificates'));assert(row.indexOf('Savings certificates')<row.indexOf('<small>Bank</small>'));
+ assert.match(row,/<small>Bank<\/small><b>৳2,501<\/b>/);assert.doesNotMatch(hero,/bank-order|Reorder/);
+});
+
+test('bank balance entry and quick updates preserve account details and reject invalid or failed writes',async context=>{
+ const app=await boot(context,{banks:[account]});await app.click({nav:'bank-information'});await app.click({action:'edit-bank-account',id:account.id});assert.match(app.node('modal').innerHTML,/name="balance"[^>]*type="number"/);
+ await app.submit({...fields,balance:'1234.56'});let saved=app.saved().bankAccounts[0];assert.equal(saved.balance,123456);assert.equal(saved.accountNumber,account.accountNumber);
+ await app.click({action:'update-bank-balance',id:account.id});assert.match(app.node('modal').innerHTML,/Update bank balance/);assert.match(app.node('modal').innerHTML,/value="1234.56"/);
+ for(const balance of ['', ' ', '-1','0.001','1e20']){await app.submitForm('bank-balance-form',{balance});assert.equal(app.saved().bankAccounts[0].balance,123456);assert(app.node('modal').open);}
+ app.server.failWrites=true;await app.submitForm('bank-balance-form',{balance:'2000'});assert.equal(app.saved().bankAccounts[0].balance,123456);assert(app.node('modal').open);app.server.failWrites=false;
+ await app.submitForm('bank-balance-form',{balance:'2000.01'});saved=app.saved().bankAccounts[0];assert.equal(saved.balance,200001);assert.equal(saved.accountTitle,account.accountTitle);assert.equal(saved.accountNumber,account.accountNumber);assert(!app.node('modal').open);
+ await app.click({action:'update-bank-balance',id:account.id});await app.click('close-modal');assert.equal(app.saved().bankAccounts[0].balance,200001);
+});
+
+test('stale balance actions and forms cannot affect another account, and deposit-only currency changes protect bank funds',async context=>{
+ const app=await boot(context,{banks:[{...account,balance:50000}]});await app.click({nav:'bank-information'});const staleAction={...app.actionData('update-bank-balance',account.id)};await app.click(staleAction);const staleForm=app.makeForm('bank-balance-form',{balance:'9999'});
+ await app.switchToBob();await app.click(staleAction);assert(!app.node('modal').open);await app.dispatch('submit',{target:staleForm,preventDefault(){}});assert.equal(app.saved().bankAccounts[0].balance,undefined);assert.equal(app.saved().bankAccounts[0].accountTitle,'Bob Example');
+ await app.click({nav:'bank-information'});await app.click({action:'update-bank-balance',id:account.id});await app.submitForm('bank-balance-form',{balance:'500'});const before=app.saved();
+ await app.importFile(Transfer.instrumentCSV({...emptyState(),currency:'USD',assets:[deposit]}),'deposits.csv');await app.click({action:'apply-import',mode:'replace'});assert.deepEqual(app.saved(),before,'A deposit-only backup cannot relabel retained bank balances');assert.match(app.node('toast').textContent,/different currency/);
 });
