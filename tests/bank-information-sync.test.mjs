@@ -120,6 +120,13 @@ test('authenticated server writes validate bank details before contacting Google
  assert.equal(saved.body.backup.data.bankAccounts[0].routingNumber,'000123456');
 });
 
+test('authenticated server rejects malformed balances and retains exact valid bank funds',async()=>{
+ const api=apiHarness();
+ for(const balance of [-1,0.1,'1200',null,1e13+1]){const backup=documentBackup();backup.sync.entries['p/bankAccounts'].v[0].balance=balance;const response=await api.save(backup);assert.equal(response.statusCode,400);assert.equal(response.body.error.code,'INVALID_BACKUP');}
+ assert.equal(api.writes,0);
+ const saved=await api.save(documentBackup([{...account,balance:123456}]));assert.equal(saved.statusCode,200);assert.equal(saved.body.backup.data.bankAccounts[0].balance,123456);assert.equal(api.writes,1);
+});
+
 test('bank information sign-in preserves its exact local route and rejects unsafe return targets',async()=>{
  for(const [returnTo,expected] of [['/#bank-information','/#bank-information'],['/#bank-information?next=https://other.example','/#dashboard'],['https://other.example/#bank-information','/#dashboard']]){
   let target;

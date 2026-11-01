@@ -45,12 +45,12 @@ test('editing a custom 90-day contract preserves its days, annual tenure and est
  const saved=draftDeposit(app.values(),sample);for(const key of ['cycle','cycleUnit','start','first','maturity','tenureCount','tenureUnit','autoRenew'])assert.equal(saved[key],sample[key]);
 });
 
-test('100-day preset/custom synchronization and reversals match the phone interactions',()=>{
- const app=formApp();app.fill({tenureChoice:'100days'});app.sync('tenureChoice');assert.equal(app.get('payoutChoice').value,'100');assert(app.get('autoRenew').checked);
- app.fill({payoutChoice:'1'});app.sync('payoutChoice');assert.equal(app.get('tenureChoice').value,'1year');
+test('100-day presets and Custom fields stay independent like the phone interactions',()=>{
+ const app=formApp();app.fill({tenureChoice:'100days'});app.sync('tenureChoice');assert.equal(app.get('payoutChoice').value,'3');assert(!app.get('autoRenew').checked);
+ app.fill({payoutChoice:'1'});app.sync('payoutChoice');assert.equal(app.get('tenureChoice').value,'100days');
  app.fill({payoutChoice:'custom',customPayoutCount:100,customPayoutUnit:'days'});app.sync('customPayoutCount');assert.equal(app.get('tenureChoice').value,'100days');
- app.fill({payoutChoice:'100'});app.sync('payoutChoice');app.fill({tenureChoice:'3years'});app.sync('tenureChoice');assert.equal(app.get('payoutChoice').value,'3');
- app.fill({tenureChoice:'custom',customTenureCount:100,customTenureUnit:'days'});app.sync('customTenureCount');assert.equal(app.get('payoutChoice').value,'100');assert.equal(draftDeposit(app.values()).maturity,'2027-02-04');
+ app.fill({tenureChoice:'3years'});app.sync('tenureChoice');assert.equal(app.get('payoutChoice').value,'custom');assert.equal(app.get('customPayoutCount').value,'100');
+ app.fill({tenureChoice:'custom',customTenureCount:100,customTenureUnit:'days'});app.sync('customTenureCount');assert.equal(app.get('payoutChoice').value,'custom');assert(!app.get('customPayout').hidden);assert(!app.get('customTenure').hidden);assert.equal(draftDeposit(app.values()).maturity,'2027-02-04');
 });
 
 test('compound controls submit maturity terms only and certificates cannot renew',()=>{
