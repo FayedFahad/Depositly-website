@@ -1,0 +1,168 @@
+/* Shared controls retain the production palette and surrounding layouts. */
+:root {
+  --control-radius: 12px;
+  --control-ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+/* Every button owns its existing press ripple, including compact actions. */
+button { position: relative; isolation: isolate; }
+
+.btn, .icon-button, .text-button, .nav button, .segmented button,
+.bank-view-options button, .bank-copy-button, .table-action, .modal-close {
+  transition: background-color 150ms var(--control-ease), border-color 150ms var(--control-ease),
+    color 150ms var(--control-ease), box-shadow 150ms var(--control-ease), transform 120ms var(--control-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn {
+  border-radius: var(--control-radius);
+  border-color: var(--line);
+  box-shadow: var(--shadow-sm);
+}
+.btn.primary { box-shadow: 0 2px 5px #0f172a24; }
+.btn.danger { border-color: transparent; }
+
+.icon-button, .modal-close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border-radius: var(--control-radius);
+  color: var(--ink-secondary);
+}
+.btn svg, .icon-button svg, .modal-close svg, .bank-copy-button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke-width: 1.8;
+}
+.text-button { min-height: 32px; border-radius: 8px; }
+.text-button svg { flex-shrink: 0; }
+.text-button:hover svg, .nav button:hover svg { transform: none; }
+
+.nav button { font-weight: 600; border-radius: var(--control-radius); }
+.nav button.active { box-shadow: 0 3px 10px #2563eb26; }
+.nav svg { flex-shrink: 0; stroke-width: 1.8; }
+.nav button.active .nav-count { background: #ffffff26; }
+
+.sidebar-footer .sidebar-settings {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--sidebar-line);
+  border-radius: var(--control-radius);
+  background: var(--sidebar-card);
+  color: var(--sidebar-text-bright);
+}
+.sidebar-footer .sidebar-settings svg { width: 20px; height: 20px; }
+.sidebar-footer .sidebar-settings[aria-current="page"] {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.segmented { border-radius: var(--control-radius); }
+.segmented button { border-radius: 8px; font-weight: 600; }
+.segmented button.selected { font-weight: 700; }
+.bank-view-options button { border-radius: var(--control-radius); font-weight: 600; }
+.bank-copy-button { border-radius: 10px; }
+.table-action { border-radius: 8px; }
+
+:is(button, .btn):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.nav button:focus-visible, .sidebar-footer .sidebar-settings:focus-visible {
+  outline-color: #93c5fd;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:not(:disabled):not([aria-disabled="true"]):hover {
+    border-color: var(--line-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+  .btn.primary:not(:disabled):not([aria-disabled="true"]):hover {
+    border-color: transparent;
+    box-shadow: 0 3px 8px #0f172a30;
+  }
+  .icon-button:not(:disabled):not([aria-disabled="true"]):hover,
+  .modal-close:not(:disabled):hover {
+    background: var(--surface-hover);
+    border-color: var(--line-hover);
+    color: var(--ink);
+    transform: none;
+    box-shadow: var(--shadow-sm);
+  }
+  .sidebar-footer .sidebar-settings:not(:disabled):hover {
+    background: #ffffff0f;
+    border-color: #94a3b84d;
+    color: #fff;
+    box-shadow: none;
+  }
+  .sidebar-footer .sidebar-settings[aria-current="page"]:hover { background: #1d4ed8; }
+  .bank-view-options button:not(:disabled):not([aria-pressed="true"]):hover {
+    background: var(--surface-subtle);
+    border-color: var(--line-hover);
+  }
+}
+
+.btn:not(:disabled):not([aria-disabled="true"]):active,
+.icon-button:not(:disabled):not([aria-disabled="true"]):active,
+.modal-close:not(:disabled):active { transform: translateY(1px); box-shadow: none; }
+
+/* Disabled controls keep their own state instead of borrowing hover effects. */
+button:is(:disabled, [aria-disabled="true"]) { cursor: not-allowed; }
+:is(.btn, .icon-button, .text-button, .nav button, .segmented button,
+  .bank-view-options button, .bank-copy-button, .table-action, .modal-close):is(:disabled, [aria-disabled="true"]),
+:is(.btn, .icon-button, .text-button, .nav button, .segmented button,
+  .bank-view-options button, .bank-copy-button, .table-action, .modal-close):is(:disabled, [aria-disabled="true"]):is(:hover, :active) {
+  opacity: .5;
+  transform: none;
+  box-shadow: none;
+}
+.btn:is(:disabled, [aria-disabled="true"]):is(:hover, :active) {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.btn.primary:is(:disabled, [aria-disabled="true"]):is(:hover, :active) {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: transparent;
+  color: #fff;
+}
+.btn.danger:is(:disabled, [aria-disabled="true"]):is(:hover, :active) {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--danger);
+}
+.icon-button:is(:disabled, [aria-disabled="true"]):is(:hover, :active),
+.bank-view-options button:disabled:is(:hover, :active) {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--muted);
+}
+.text-button:disabled:is(:hover, :active) { color: var(--primary); }
+.text-button.danger:disabled:is(:hover, :active) { color: var(--danger); }
+.bank-copy-button:disabled:is(:hover, :active) { background: transparent; }
+
+@media (pointer: coarse) {
+  .text-button, .segmented button, .table-action { min-height: 44px; }
+  .table-action { min-width: 44px; }
+  /* Keep the visible switch track; extend only its touch target. */
+  .switch::before { content: ""; position: absolute; inset: -9px -2px; border-radius: 12px; }
+}
+@media (hover: none) {
+  .btn:hover, .btn.primary:hover, .icon-button:hover,
+  .text-button:hover svg, .nav button:hover svg { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .icon-button, .text-button, .nav button, .segmented button,
+  .bank-view-options button, .bank-copy-button, .table-action, .modal-close { transition: none; }
+  :is(.btn, .icon-button, .modal-close):is(:hover, :active),
+  .text-button:hover svg, .nav button:hover svg { transform: none !important; }
+}

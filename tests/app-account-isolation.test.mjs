@@ -92,6 +92,16 @@ test('saved Android table preferences open as cards without modifying the backup
  assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),saved,'layout changes must not rewrite Android settings or deposits');
 });
 
+test('sidebar settings controls share one accessible cog and keep route state in sync', async context => {
+ const app=await boot(context),saved=app.storage.getItem(accountWorkspaceKey(alice));
+ const controls=()=>[...app.node('app').innerHTML.matchAll(/<button\b[^>]*data-nav="settings"[^>]*>[\s\S]*?<\/button>/g)].map(match=>match[0]);
+ const svg=button=>button.match(/<svg\b[^>]*>[\s\S]*?<\/svg>/)?.[0];
+ let buttons=controls();assert.equal(buttons.length,2);assert.equal(svg(buttons[0]),svg(buttons[1]),'Navigation and footer use the same glyph');assert.match(svg(buttons[1]),/viewBox="0 0 24 24" aria-hidden="true"/);
+ let footer=buttons.find(button=>button.includes('sidebar-settings'));assert(footer);assert.match(footer,/type="button"/);assert.match(footer,/class="icon-button sidebar-settings"/);assert.match(footer,/aria-label="Open settings"/);assert.match(footer,/title="Settings"/);assert.doesNotMatch(footer,/aria-current="page"/);
+ await app.click({nav:'settings'});assert.match(app.node('app').innerHTML,/<h1>Settings<\/h1>/);buttons=controls();assert(buttons.every(button=>button.includes('aria-current="page"')));assert.equal(svg(buttons[0]),svg(buttons[1]));
+ await app.click({nav:'dashboard'});footer=controls().find(button=>button.includes('sidebar-settings'));assert.doesNotMatch(footer,/aria-current="page"/);assert.match(app.node('app').innerHTML,/Alice/);assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),saved,'Settings navigation never changes financial records or account identity');
+});
+
 const wrongHundred={type:'FDR',principal:30000000,rate:8,tds:15,cycle:3,cycleUnit:'months',start:'2026-10-01',first:'2027-01-01',maturity:'2027-01-09',tenureCount:100,tenureUnit:'days',autoRenew:true,ownership:'self'};
 test('opening an old quarterly/100-day workspace persists corrected registry fields using the raw baseline',async context=>{
  const app=await boot(context,{asset:wrongHundred,rawRegistry:true}),saved=JSON.parse(app.storage.getItem(accountWorkspaceKey(alice))),entries=saved.syncDocument.entries;
