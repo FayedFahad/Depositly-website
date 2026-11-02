@@ -167,6 +167,54 @@ test('bank grouping and card/grid selections persist without altering saved acco
  app.server.failWrites=true;await app.click({action:'bank-layout',value:'card'});assert.equal(app.saved().bankInformationView,'grid');assert.match(app.node('app').innerHTML,/id="bank-view-grid"[^>]*aria-pressed="true"/);app.server.failWrites=false;
 });
 
+const bankFilterButtons=html=>[...html.matchAll(/<button\b[^>]*>/g)].map(([tag])=>({tag,data:dataAttributes(tag)})).filter(({data})=>data.action==='bank-filter');
+const visibleBankGroups=html=>[...html.matchAll(/\bdata-bank-group="([^"]*)"/g)].map(([,key])=>decodeHTML(key));
+const selectedBankFilter=html=>bankFilterButtons(html).filter(({tag})=>/\baria-pressed="true"/.test(tag)).map(({data})=>decodeHTML(data.value));
+
+test('bank icon filters show only saved banks and narrow both layouts without saving the filter',async context=>{
+ const legacy={...account,id:'legacy-bank',bankId:'',bankName:'AB BANK LIMITED',accountTitle:'Legacy Example'},city={...account,id:'city-bank',bankId:'city-bank-plc',bankName:'City Bank PLC',accountTitle:'City Example'},custom={...account,id:'custom-bank',bankId:'',bankName:'Custom Bank',accountTitle:'Custom Example'};
+ const app=await boot(context,{banks:[account,legacy,city,custom]});await app.click({nav:'bank-information'});
+ let html=app.node('app').innerHTML;
+ assert(html.indexOf('bank-filter-options')<html.indexOf('bank-view-options'),'Bank icons precede the Cards/Grid controls');
+ assert.deepEqual(bankFilterButtons(html).map(({data})=>decodeHTML(data.value)),['','bank:ab-bank-plc','bank:city-bank-plc','name:custom bank']);
+ assert.deepEqual(selectedBankFilter(html),['']);
+ for(const {tag} of bankFilterButtons(html))assert.match(tag,/\baria-label="[^"]+"/,'Every icon-only filter has an accessible name');
+ const before=app.storage.getItem(accountWorkspaceKey(alice));
+ await app.click({action:'bank-filter',value:'bank:ab-bank-plc'});html=app.node('app').innerHTML;
+ assert.deepEqual(visibleBankGroups(html),['bank:ab-bank-plc']);assert.deepEqual(selectedBankFilter(html),['bank:ab-bank-plc']);
+ assert.match(html,/Alice Example/);assert.match(html,/Legacy Example/);assert.doesNotMatch(html,/City Example|Custom Example/);
+ assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),before,'Filtering does not modify the saved workspace');
+ await app.click({nav:'backup'});await app.click({nav:'bank-information'});assert.deepEqual(visibleBankGroups(app.node('app').innerHTML),['bank:ab-bank-plc']);
+ await app.click({action:'bank-layout',value:'grid'});assert.match(app.node('app').innerHTML,/bank-layout-grid/);assert.deepEqual(visibleBankGroups(app.node('app').innerHTML),['bank:ab-bank-plc']);
+ for(const [value,title] of [['bank:city-bank-plc','City Example'],['name:custom bank','Custom Example']]){
+  const savedBefore=app.storage.getItem(accountWorkspaceKey(alice));await app.click({action:'bank-filter',value});html=app.node('app').innerHTML;
+  assert.deepEqual(visibleBankGroups(html),[value]);assert.deepEqual(selectedBankFilter(html),[value]);assert(html.includes(title));assert.equal(bankFilterButtons(html).length,4,'Other saved-bank filters remain available');
+  assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),savedBefore);
+ }
+ await app.click({action:'bank-filter',value:''});assert.deepEqual(visibleBankGroups(app.node('app').innerHTML),['bank:ab-bank-plc','bank:city-bank-plc','name:custom bank']);assert.deepEqual(selectedBankFilter(app.node('app').innerHTML),['']);
+ assert.deepEqual(app.saved().bankAccounts,[account,legacy,city,custom]);
+});
+
+test('removing the selected bank resets the filter and an empty workspace has no bank icons',async context=>{
+ const city={...account,id:'city-bank',bankId:'city-bank-plc',bankName:'City Bank PLC',accountTitle:'City Example'};
+ const app=await boot(context,{banks:[account,city]});await app.click({nav:'bank-information'});await app.click({action:'bank-filter',value:'bank:city-bank-plc'});
+ await app.click({action:'delete-bank-account',id:city.id});await app.click({action:'confirm-delete-bank-account',id:city.id});
+ assert.deepEqual(visibleBankGroups(app.node('app').innerHTML),['bank:ab-bank-plc']);assert.deepEqual(selectedBankFilter(app.node('app').innerHTML),['']);assert.equal(bankFilterButtons(app.node('app').innerHTML).length,2);
+ await app.click({action:'delete-bank-account',id:account.id});await app.click({action:'confirm-delete-bank-account',id:account.id});
+ assert.deepEqual(app.saved().bankAccounts,[]);assert.deepEqual(bankFilterButtons(app.node('app').innerHTML),[]);
+});
+
+test('account switches reset the bank filter and reject stale filter actions even for a shared bank',async context=>{
+ const city={...account,id:'city-bank',bankId:'city-bank-plc',bankName:'City Bank PLC'};
+ const app=await boot(context,{banks:[account,city]});await app.click({nav:'bank-information'});await app.click({action:'bank-filter',value:'bank:ab-bank-plc'});
+ const stale={...app.actionData('bank-filter'),value:'bank:ab-bank-plc'},aliceBefore=app.storage.getItem(accountWorkspaceKey(alice));
+ await app.switchToBob();await app.click({nav:'bank-information'});
+ assert.deepEqual(selectedBankFilter(app.node('app').innerHTML),['']);assert.deepEqual(bankFilterButtons(app.node('app').innerHTML).map(({data})=>data.value),['','bank:ab-bank-plc']);
+ const bobBefore=app.storage.getItem(accountWorkspaceKey(bob));await app.click(stale);
+ assert.deepEqual(selectedBankFilter(app.node('app').innerHTML),['']);assert.match(app.node('app').innerHTML,/Bob Example/);assert.doesNotMatch(app.node('app').innerHTML,/Alice Example|00123456789012345|City Bank PLC/);
+ assert.equal(app.storage.getItem(accountWorkspaceKey(alice)),aliceBefore);assert.equal(app.storage.getItem(accountWorkspaceKey(bob)),bobBefore);
+});
+
 test('copy icons preserve exact numbers in every view, forms and clipboard fallback',async context=>{
  const app=await boot(context,{banks:[account]});await app.click({nav:'bank-information'});
  for(const view of ['card','grid']){
