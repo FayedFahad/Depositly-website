@@ -135,7 +135,9 @@ test('opening an imported backup returns a table session to cards', async contex
  const incoming={...emptyState(),defaultDepositView:'grid',assets:[asset('imported','Imported deposit')]};
  await app.dispatchDocument('change',{target:{id:'file-import',value:'backup.json',files:[{name:'backup.json',size:500,text:async()=>JSON.stringify(Transfer.exportData(incoming))}]}});
  assert.equal(app.node('modal').open,true);
- await app.click({action:'apply-import',mode:'replace'});
+ const importScope=app.node('modal').innerHTML.match(/data-action="apply-import"[^>]*data-scope="(\d+)"/)?.[1];
+ assert(importScope,'Import actions carry the rendered account scope');
+ await app.click({action:'apply-import',mode:'replace',scope:importScope});
  assert.equal(app.node('modal').open,false);
  assert.match(app.node('app').innerHTML,/class="holdings-grid"/);
  assert.match(app.node('app').innerHTML,/Imported deposit/);

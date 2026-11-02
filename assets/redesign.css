@@ -2058,6 +2058,17 @@ body.dark .asset-icon.bank-mark {
   margin-top: 20px;
 }
 
+.backup-file-downloads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 10px;
+}
+
+.backup-file-downloads .backup-full { grid-column: 1 / -1; }
+.backup-file-downloads .btn { min-height: 48px; white-space: normal; }
+.backup-file-import { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.backup-file-import p { flex: 1; min-width: 170px; font-size: 12px; line-height: 1.6; }
+
 /* Settings Rows */
 .setting-row {
   display: flex;

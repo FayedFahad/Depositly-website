@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {setImmediate as nextTurn} from 'node:timers/promises';
 import {accountWorkspaceKey, ACCOUNT_WORKSPACE_PREFIX} from '../assets/account-workspaces.js';
-import {emptyState, Transfer, formatMoney} from '../assets/data-engine.js';
+import {emptyState, Transfer, formatMoney, createCloudBackup, normalizeBackup, recordPayment} from '../assets/data-engine.js';
 import {AUTH_EVENT_KEY} from '../assets/cloud-sync.js';
 
 const alice={sub:'bank-ui-alice',name:'Alice Example',email:'alice@example.com'};
@@ -18,7 +18,7 @@ const dataAttributes=tag=>Object.fromEntries([...String(tag||'').matchAll(/\bdat
 const decodeHTML=value=>value.replace(/&(amp|lt|gt|quot|#39);/g,(_,entity)=>({amp:'&',lt:'<',gt:'>',quot:'"','#39':"'"}[entity]));
 
 /** Exercise the real app entry point without a browser, account credentials or network. */
-async function boot(context,{banks=[],guest=false,view,assets,paid={}}={}){
+async function boot(context,{banks=[],guest=false,view,assets,paid={},settings={},reminders={enabled:false,time:'09:00'}}={}){
  const originals=new Map(),nodes=new Map(),documentListeners=new Map(),windowListeners=new Map(),renders=[];
  const replace=(name,value)=>{originals.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value});};
  const register=(map,type,callback)=>{if(!map.has(type))map.set(type,[]);map.get(type).push(callback);};
@@ -30,13 +30,15 @@ async function boot(context,{banks=[],guest=false,view,assets,paid={}}={}){
    close(){this.open=false;},showModal(){this.open=true;},getBoundingClientRect:()=>({left:0,right:100,top:0,bottom:100})});}
   return nodes.get(id);
  };
- const makeWorkspace=(user,name,accounts)=>({data:{...emptyState(),assets:user.sub===alice.sub&&assets?assets:[{...deposit,id:user.sub,name}],paid:user.sub===alice.sub?paid:{},bankAccounts:accounts,...(user.sub===alice.sub&&view?{bankInformationView:view}:{})},owner:user.sub,dirty:true,reminders:{enabled:false,time:'09:00'},updatedAt:'2026-10-25T00:00:00Z'});
+ const makeWorkspace=(user,name,accounts)=>({data:{...emptyState(),...(user.sub===alice.sub?settings:{}),assets:user.sub===alice.sub&&assets?assets:[{...deposit,id:user.sub,name}],paid:user.sub===alice.sub?paid:{},bankAccounts:accounts,...(user.sub===alice.sub&&view?{bankInformationView:view}:{})},owner:user.sub,dirty:true,reminders:user.sub===alice.sub?reminders:{enabled:false,time:'09:00'},updatedAt:'2026-10-25T00:00:00Z'});
  const values=new Map([[accountWorkspaceKey(alice),JSON.stringify(makeWorkspace(alice,'ALICE_PRIVATE_DEPOSIT',banks))],[accountWorkspaceKey(bob),JSON.stringify(makeWorkspace(bob,'BOB_PRIVATE_DEPOSIT',[{...account,accountTitle:'Bob Example',accountNumber:'0000000000002'}]))]]);
- const server={user:guest?null:alice,saves:0,failWrites:false,shared:[],copied:[]};
+ const server={user:guest?null:alice,saves:0,failWrites:false,shared:[],copied:[],downloads:[]},downloadBlobs=new Map();
  const storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>{if(server.failWrites&&key===accountWorkspaceKey(server.user))throw Error('Quota exceeded');values.set(key,value);},removeItem:key=>values.delete(key)};
  const session=user=>user?{authenticated:true,configured:true,user,csrfToken:'synthetic-bank-test-token',expiresAt:Date.now()+100000}:{authenticated:false,configured:true};
  let copyInput;
- replace('document',{hidden:false,body:{classList:classList(),dataset:{},appendChild(){}},getElementById:node,querySelector:node,activeElement:node('active'),createElement:()=>copyInput={value:'',style:{},focus(){},select(){},remove(){}},execCommand:command=>{if(command!=='copy')return false;server.copied.push(copyInput.value);return true;},addEventListener:(type,callback)=>register(documentListeners,type,callback)});
+ replace('document',{hidden:false,body:{classList:classList(),dataset:{},appendChild(){}},getElementById:node,querySelector:node,activeElement:node('active'),createElement:tag=>tag==='a'?{href:'',download:'',click(){server.downloads.push({name:this.download,blob:downloadBlobs.get(this.href)});}}:copyInput={value:'',style:{},focus(){},select(){},remove(){}},execCommand:command=>{if(command!=='copy')return false;server.copied.push(copyInput.value);return true;},addEventListener:(type,callback)=>register(documentListeners,type,callback)});
+ const NativeURL=globalThis.URL;
+ replace('URL',class extends NativeURL {static createObjectURL(blob){const url='blob:backup-test-'+downloadBlobs.size;downloadBlobs.set(url,blob);return url;}static revokeObjectURL(url){downloadBlobs.delete(url);}});
  replace('window',{addEventListener:(type,callback)=>register(windowListeners,type,callback),scrollTo(){}});
  replace('localStorage',storage);
  replace('location',{origin:'https://depositly.example',pathname:'/',hash:'#dashboard',search:'',assign(){}});
@@ -73,12 +75,13 @@ async function boot(context,{banks=[],guest=false,view,assets,paid={}}={}){
  };
  const form=values=>({id:'bank-account-form',dataset:dataAttributes(node('modal').innerHTML.match(/<form\b[^>]*id="bank-account-form"[^>]*>/)?.[0]),values});
  const submit=values=>dispatch('submit',{target:form(values),preventDefault(){}});
- const saved=(user=server.user)=>JSON.parse(storage.getItem(user?accountWorkspaceKey(user):`${ACCOUNT_WORKSPACE_PREFIX}.guest`)).data;
+ const workspace=(user=server.user)=>JSON.parse(storage.getItem(user?accountWorkspaceKey(user):`${ACCOUNT_WORKSPACE_PREFIX}.guest`));
+ const saved=(user=server.user)=>workspace(user).data;
  const importFile=(text,name='banks.json')=>dispatch('change',{target:{id:'file-import',value:name,files:[{name,size:text.length,text:async()=>text}]}});
  const switchToBob=async()=>{server.user=bob;windowEvent('storage',{key:AUTH_EVENT_KEY});await until(()=>node('app').innerHTML.includes('Bob Example')&&node('app').innerHTML.includes('aria-busy="false"'),'verified Bob workspace opens');await nextTurn();};
  const makeForm=(id,values)=>({id,dataset:dataAttributes(node('modal').innerHTML.match(new RegExp('<form\\b[^>]*id="'+id+'"[^>]*>'))?.[0]),values});
  const submitForm=(id,values)=>dispatch('submit',{target:makeForm(id,values),preventDefault(){}});
- return {node,server,storage,renders,click,dispatch,windowEvent,form,submit,saved,importFile,switchToBob,actionData,makeForm,submitForm};
+ return {node,server,storage,renders,click,dispatch,windowEvent,form,submit,saved,workspace,importFile,switchToBob,actionData,makeForm,submitForm};
 }
 
 test('bank navigation, required dropdown fields, optional type and leading-zero CRUD use the account workspace',async context=>{
@@ -321,4 +324,92 @@ test('stale balance actions and forms cannot affect another account, and deposit
  await app.switchToBob();await app.click(staleAction);assert(!app.node('modal').open);await app.dispatch('submit',{target:staleForm,preventDefault(){}});assert.equal(app.saved().bankAccounts[0].balance,undefined);assert.equal(app.saved().bankAccounts[0].accountTitle,'Bob Example');
  await app.click({nav:'bank-information'});await app.click({action:'update-bank-balance',id:account.id});await app.submitForm('bank-balance-form',{balance:'500'});const before=app.saved();
  await app.importFile(Transfer.instrumentCSV({...emptyState(),currency:'USD',assets:[deposit]}),'deposits.csv');await app.click({action:'apply-import',mode:'replace'});assert.deepEqual(app.saved(),before,'A deposit-only backup cannot relabel retained bank balances');assert.match(app.node('toast').textContent,/different currency/);
+});
+
+function backupFixture(){
+ const bank={...account,balance:123456},linked={...deposit,id:alice.sub,bankAccountId:bank.id};
+ return recordPayment({...emptyState(),bankAccounts:[bank],assets:[linked],bankInformationView:'grid'},linked.id+':2026-02-01',{amount:7500,date:'2026-02-03',notes:'Historical receiving account'});
+}
+
+test('Backup files exposes three working downloads and full JSON restores records, preferences and reminders',async context=>{
+ const source=backupFixture(),reminders={enabled:true,time:'08:45',futurePreference:{vibrate:true}};
+ const app=await boot(context,{banks:source.bankAccounts,assets:source.assets,paid:source.paid,view:'grid',settings:{dark:true,numberFormat:'international',defaultDepositView:'grid',customPreference:{future:true}},reminders});
+ await app.click({nav:'backup'});const html=app.node('app').innerHTML;
+ for(const label of ['Download Full backup','Export CSV (Deposits)','Export CSV (Bank Info)','Import file'])assert(html.includes(label),label+' is offered in Backup files');
+ const before=app.saved();
+ for(const action of ['export-json','export-deposits-csv','export-banks-csv'])await app.click(action);
+ assert.equal(app.server.downloads.length,3,'Each download control produces its own file');
+ const [full,deposits,banks]=app.server.downloads;
+ assert.match(full.name,/\.json$/i);assert.equal(full.blob.type,'application/json');
+ const fullText=await full.blob.text(),restored=normalizeBackup(fullText);
+ assert.deepEqual(restored.data,before);assert.deepEqual(restored.notificationSettings,reminders);
+ assert.doesNotMatch(fullText,/csrfToken|synthetic-bank-test-token|access_token|refresh_token/);
+ assert.match(deposits.name,/\.csv$/i);assert.match(banks.name,/\.csv$/i);assert.notEqual(deposits.name,banks.name);
+ const depositText=await deposits.blob.text(),bankText=await banks.blob.text();
+ assert.equal(Transfer.csvKind(depositText),'deposits');assert.equal(Transfer.csvKind(bankText),'banks');
+ const depositData=Transfer.readDepositsCSV(depositText),bankData=Transfer.readBankAccountsCSV(bankText);
+ assert.deepEqual(depositData.assets,before.assets);assert.deepEqual(depositData.paid,before.paid);assert.deepEqual(depositData.bankAccounts,[]);
+ assert.deepEqual(bankData.bankAccounts,before.bankAccounts);assert.deepEqual(bankData.assets,[]);assert.deepEqual(bankData.paid,{});assert.equal(bankData.bankInformationView,'grid');
+ assert.doesNotMatch(bankText,/Historical receiving account|ALICE_PRIVATE_DEPOSIT/);
+ await app.importFile(JSON.stringify(createCloudBackup({...emptyState(),currency:'USD'},{enabled:false,time:'10:00'})));await app.click({action:'apply-import',mode:'replace'});
+ assert.deepEqual(app.saved().assets,[]);assert.deepEqual(app.saved().bankAccounts,[]);
+ await app.importFile(fullText,full.name);await app.click({action:'apply-import',mode:'replace'});
+ assert.deepEqual(app.saved(),before);assert.deepEqual(app.workspace().reminders,reminders);
+});
+
+test('the same Import file flow restores each CSV category without removing the other category',async context=>{
+ const source=backupFixture(),oldBank={...account,balance:0},reminders={enabled:true,time:'07:15'};
+ const app=await boot(context,{banks:[oldBank],view:'grid'}),beforeBanks=app.saved().bankAccounts;
+ const incoming={...source,dark:true,numberFormat:'international',defaultDepositView:'grid'};
+ await app.importFile(Transfer.depositsCSV(incoming,reminders),'Depositly-deposits.csv');await app.click({action:'apply-import',mode:'replace'});
+ assert.deepEqual(app.saved().assets,Transfer.readDepositsCSV(Transfer.depositsCSV(incoming,reminders)).assets);
+ assert.deepEqual(app.saved().paid,source.paid);assert.deepEqual(app.saved().bankAccounts,beforeBanks);
+ assert.equal(app.saved().dark,true);assert.equal(app.saved().numberFormat,'international');assert.equal(app.saved().defaultDepositView,'grid');assert.equal(app.saved().bankInformationView,'grid');assert.deepEqual(app.workspace().reminders,reminders);
+ const before=app.saved(),nextBanks=[{...account,balance:987654,branchName:'Updated CSV branch'}],bankCSV=Transfer.bankAccountsCSV({...emptyState(),bankAccounts:nextBanks,bankInformationView:'card'});
+ await app.importFile(bankCSV,'Depositly-bank-information.csv');await app.click({action:'apply-import',mode:'replace'});
+ assert.deepEqual(app.saved().bankAccounts,nextBanks);assert.equal(app.saved().bankInformationView,'card');assert.deepEqual(app.saved().assets,before.assets);assert.deepEqual(app.saved().paid,before.paid);
+ for(const setting of ['dark','currency','numberFormat','defaultDepositView'])assert.equal(app.saved()[setting],before[setting],setting+' remains unchanged during a bank-only restore');
+ assert.deepEqual(app.workspace().reminders,reminders);assert.equal(app.saved().paid[alice.sub+':2026-02-01'].snapshot.bankAccountSnapshot.accountNumber,account.accountNumber);
+});
+
+test('bank CSV replacement protects linked accounts and merging remains category-safe and idempotent',async context=>{
+ const source=backupFixture(),reminders={enabled:true,time:'06:30'};
+ const app=await boot(context,{banks:source.bankAccounts,assets:source.assets,paid:source.paid,view:'card',settings:{dark:true,numberFormat:'international',defaultDepositView:'grid'},reminders}),before=app.saved();
+ await app.importFile(Transfer.bankAccountsCSV(emptyState()),'banks.csv');await app.click({action:'apply-import',mode:'replace'});
+ assert.deepEqual(app.saved(),before,'Replacing bank accounts cannot remove the bank linked to an existing deposit');assert(app.node('modal').open);assert.match(app.node('toast').textContent,/linked|in use|deposit/i);await app.click('close-modal');
+ const added={...account,id:'csv-new-bank',bankId:'city-bank-plc',bankName:'City Bank PLC',accountNumber:'000000009999',balance:0},text=Transfer.bankAccountsCSV({...emptyState(),bankAccounts:[added],bankInformationView:'grid'});
+ for(let round=0;round<2;round++){await app.importFile(text,'banks.csv');await app.click({action:'apply-import',mode:'merge'});}
+ assert.deepEqual(app.saved().bankAccounts,[...before.bankAccounts,added]);assert.deepEqual(app.saved().assets,before.assets);assert.deepEqual(app.saved().paid,before.paid);
+ for(const setting of ['dark','currency','numberFormat','defaultDepositView'])assert.equal(app.saved()[setting],before[setting]);
+ assert.deepEqual(app.workspace().reminders,reminders);
+ const second={...deposit,id:'csv-deposit',name:'CSV new deposit'},depositCSV=Transfer.depositsCSV({...emptyState(),assets:[second]},{enabled:false,time:'11:00'});
+ for(let round=0;round<2;round++){await app.importFile(depositCSV,'deposits.csv');await app.click({action:'apply-import',mode:'merge'});}
+ assert.equal(app.saved().assets.filter(asset=>asset.id===second.id).length,1);assert.deepEqual(app.saved().bankAccounts,[...before.bankAccounts,added]);assert.deepEqual(app.saved().paid,before.paid);assert.deepEqual(app.workspace().reminders,reminders);
+});
+
+test('both CSV imports reject currency changes that would relabel retained funds, including zero balances',async context=>{
+ const app=await boot(context,{banks:[{...account,balance:0}]}),before=app.saved(),beforeReminders=app.workspace().reminders;
+ const incoming={...emptyState(),currency:'USD',assets:[{...deposit,id:'usd-deposit'}],bankAccounts:[{...account,id:'usd-bank',balance:0}]};
+ for(const text of [Transfer.depositsCSV(incoming),Transfer.bankAccountsCSV(incoming)])for(const mode of ['replace','merge']){
+  await app.importFile(text,'backup.csv');await app.click({action:'apply-import',mode});
+  assert.deepEqual(app.saved(),before,mode+' must preserve the original currency and records');assert.deepEqual(app.workspace().reminders,beforeReminders);assert(app.node('modal').open);await app.click('close-modal');
+ }
+});
+
+test('CSV review and delayed reads cannot cross the active Google account boundary',async context=>{
+ const app=await boot(context,{banks:[account]}),text=Transfer.bankAccountsCSV({...emptyState(),bankAccounts:[{...account,id:'imported-bank'}]}),held=deferred();
+ await app.importFile(text,'banks.csv');assert(app.node('modal').open,'A bank CSV opens review before the account changes');const aliceBefore=app.workspace();
+ const pending=app.dispatch('change',{target:{id:'file-import',files:[{name:'banks.csv',size:text.length,text:()=>held.promise}]}});
+ await app.switchToBob();const bobBefore=app.saved();held.resolve(text);await pending;await app.click({action:'apply-import',mode:'replace'});
+ assert.deepEqual(app.saved(),bobBefore);assert.deepEqual(app.workspace(alice),aliceBefore);assert.equal(app.node('modal').open,false);assert.doesNotMatch(app.node('app').innerHTML,/imported-bank|Alice Example/);
+});
+
+test('a newer file selection wins over an older read and an invalid file cannot apply an earlier review',async context=>{
+ const app=await boot(context,{banks:[account]}),held=deferred();
+ const csvFor=id=>Transfer.bankAccountsCSV({...emptyState(),bankAccounts:[{...account,id}]}),oldText=csvFor('older-file-bank'),newText=csvFor('newer-file-bank');
+ const pending=app.dispatch('change',{target:{id:'file-import',files:[{name:'older.csv',size:oldText.length,text:()=>held.promise}]}});
+ await app.importFile(newText,'newer.json');assert(app.node('modal').open,'File content identifies the bank CSV despite a different extension');held.resolve(oldText);await pending;
+ await app.click({action:'apply-import',mode:'merge'});assert(app.saved().bankAccounts.some(bank=>bank.id==='newer-file-bank'));assert(!app.saved().bankAccounts.some(bank=>bank.id==='older-file-bank'));
+ await app.importFile(oldText,'older.csv');assert(app.node('modal').open);const staleApply={...app.actionData('apply-import'),mode:'replace'},before=app.saved();
+ await app.importFile('{invalid JSON','broken.json');assert.equal(app.node('modal').open,false);await app.click(staleApply);assert.deepEqual(app.saved(),before,'An earlier valid backup cannot be applied after a failed new selection');
 });
