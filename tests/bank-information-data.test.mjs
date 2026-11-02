@@ -58,13 +58,14 @@ test('bank CRUD preserves deposits and receipts without mutating existing accoun
 });
 
 test('full and cloud backups include bank accounts while selected deposit exports and CSV exclude them', () => {
-  const state = {...emptyState(), bankAccounts: [sample]};
+  const state = {...emptyState(), bankAccounts: [sample], bankInformationOrder: ['bank:ab-bank-plc', 'name:private custom bank']};
   const backup = Transfer.exportData(state);
   assert.deepEqual(Transfer.migrate(JSON.parse(JSON.stringify(backup))).bankAccounts, [sample]);
   assert.deepEqual(normalizeBackup(createCloudBackup(state)).data, state);
   assert.notEqual(backup.bankAccounts[0], sample);
   const selected = Transfer.exportData(state, []);
   assert.equal(Object.hasOwn(selected, 'bankAccounts'), false);
+  assert.equal(Object.hasOwn(selected, 'bankInformationOrder'), false, 'Selected exports exclude private saved bank names and ordering');
   assert.equal(Transfer.instrumentCSV(state).includes(sample.accountNumber), false);
   assert.equal(Transfer.instrumentCSV(state).includes(sample.accountTitle), false);
 });

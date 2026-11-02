@@ -1,4 +1,6 @@
 import {Transfer,normalizeBackup} from './data-engine.js';
+import {readBankInformationCSV} from './bank-order-csv.js';
+export {exportBankInformationCSV} from './bank-order-csv.js';
 
 const kinds=new Set(['json','deposits','banks','backup-csv','csv']);
 const bankView=state=>['card','grid'].includes(state.bankInformationView)?state.bankInformationView:'card';
@@ -22,7 +24,7 @@ export function readBackupFile(text){
   kind='json';backup=normalizeBackup(raw);preservesBanks=raw?.scope==='selected';
  }else{
   kind=Transfer.csvKind(content);
-  const reader=kind==='deposits'?Transfer.readDepositsCSV:kind==='banks'?Transfer.readBankAccountsCSV:kind==='backup-csv'?Transfer.readBackupCSV:Transfer.readInstrumentCSV;
+  const reader=kind==='deposits'?Transfer.readDepositsCSV:kind==='banks'?readBankInformationCSV:kind==='backup-csv'?Transfer.readBackupCSV:Transfer.readInstrumentCSV;
   backup=normalizeBackup(reader(content));preservesBanks=kind==='deposits'||kind==='csv';
  }
  backup.notificationSettings=reminderSettings(backup.notificationSettings??backup.data.notificationSettings);
@@ -37,6 +39,7 @@ export function applyBackupFile(current,backup,{kind='json',preservesBanks=false
  const notificationSettings=reminderSettings(backup.notificationSettings??incoming.notificationSettings);
  if(mode==='merge'){
   const merge=Transfer.merge(current,incoming);
+  if(kind==='banks'&&Object.hasOwn(incoming,'bankInformationOrder'))merge.state.bankInformationOrder=incoming.bankInformationOrder;
   return {state:merge.state,notificationSettings:null,merge};
  }
  let state;
@@ -46,11 +49,13 @@ export function applyBackupFile(current,backup,{kind='json',preservesBanks=false
   const hasBalances=incoming.bankAccounts.some(account=>account.balance!==undefined);
   if(hasBalances&&current.assets.length&&currency(current)!==currency(incoming))throw Error('Currencies differ. Saved deposits are kept and amounts are not converted. Choose a matching-currency Bank Information CSV.');
   state={...current,bankAccounts:incoming.bankAccounts,bankInformationView:bankView(incoming),currency:hasBalances&&!current.assets.length?currency(incoming):currency(current)};
+  if(Object.hasOwn(incoming,'bankInformationOrder'))state.bankInformationOrder=incoming.bankInformationOrder;
  }else{
   const keepBanks=preservesBanks||kind==='deposits'||kind==='csv';
   if(keepBanks&&(current.bankAccounts||[]).some(account=>account.balance!==undefined)&&currency(current)!==currency(incoming))throw Error('This deposit-only backup uses a different currency from your saved bank balances. Amounts are not converted. Choose a matching-currency backup.');
   state=kind==='deposits'||kind==='csv'?{...current,...incoming}:{...incoming};
   if(keepBanks)state.bankAccounts=current.bankAccounts||[];
+  if(keepBanks){if(Object.hasOwn(current,'bankInformationOrder'))state.bankInformationOrder=current.bankInformationOrder;else delete state.bankInformationOrder;}
   state.bankInformationView=keepBanks||!['card','grid'].includes(incoming.bankInformationView)?bankView(current):incoming.bankInformationView;
   if(kind==='csv')Object.assign(state,{dark:current.dark,defaultDepositView:current.defaultDepositView,numberFormat:current.numberFormat});
  }

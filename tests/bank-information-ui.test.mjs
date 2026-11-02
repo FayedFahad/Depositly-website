@@ -4,6 +4,7 @@ import {setImmediate as nextTurn} from 'node:timers/promises';
 import {accountWorkspaceKey, ACCOUNT_WORKSPACE_PREFIX} from '../assets/account-workspaces.js';
 import {emptyState, Transfer, formatMoney, createCloudBackup, normalizeBackup, recordPayment} from '../assets/data-engine.js';
 import {AUTH_EVENT_KEY} from '../assets/cloud-sync.js';
+import {readBackupFile} from '../assets/backup-files.js';
 
 const alice={sub:'bank-ui-alice',name:'Alice Example',email:'alice@example.com'};
 const bob={sub:'bank-ui-bob',name:'Bob Example',email:'bob@example.com'};
@@ -347,7 +348,7 @@ test('Backup files exposes three working downloads and full JSON restores record
  assert.match(deposits.name,/\.csv$/i);assert.match(banks.name,/\.csv$/i);assert.notEqual(deposits.name,banks.name);
  const depositText=await deposits.blob.text(),bankText=await banks.blob.text();
  assert.equal(Transfer.csvKind(depositText),'deposits');assert.equal(Transfer.csvKind(bankText),'banks');
- const depositData=Transfer.readDepositsCSV(depositText),bankData=Transfer.readBankAccountsCSV(bankText);
+ const depositData=Transfer.readDepositsCSV(depositText),bankData=readBackupFile(bankText).backup.data;
  assert.deepEqual(depositData.assets,before.assets);assert.deepEqual(depositData.paid,before.paid);assert.deepEqual(depositData.bankAccounts,[]);
  assert.deepEqual(bankData.bankAccounts,before.bankAccounts);assert.deepEqual(bankData.assets,[]);assert.deepEqual(bankData.paid,{});assert.equal(bankData.bankInformationView,'grid');
  assert.doesNotMatch(bankText,/Historical receiving account|ALICE_PRIVATE_DEPOSIT/);
@@ -412,4 +413,55 @@ test('a newer file selection wins over an older read and an invalid file cannot 
  await app.click({action:'apply-import',mode:'merge'});assert(app.saved().bankAccounts.some(bank=>bank.id==='newer-file-bank'));assert(!app.saved().bankAccounts.some(bank=>bank.id==='older-file-bank'));
  await app.importFile(oldText,'older.csv');assert(app.node('modal').open);const staleApply={...app.actionData('apply-import'),mode:'replace'},before=app.saved();
  await app.importFile('{invalid JSON','broken.json');assert.equal(app.node('modal').open,false);await app.click(staleApply);assert.deepEqual(app.saved(),before,'An earlier valid backup cannot be applied after a failed new selection');
+});
+
+
+const bankIconOrder=html=>[...html.matchAll(/<button\b[^>]*data-action="bank-filter"[^>]*>/g)].map(match=>decodeHTML(dataAttributes(match[0]).value||'')).filter(Boolean);
+const bankGroupOrder=html=>[...html.matchAll(/data-bank-group="([^"]*)"/g)].map(([,key])=>decodeHTML(key));
+function orderedBankCSV(banks,ranks={}){
+ const rows=banks.map(bank=>[bank.id,bank.bankId,bank.bankName,bank.accountTitle,bank.accountNumber,bank.branchName,bank.routingNumber,bank.accountType,bank.balance===undefined?'':bank.balance/100,'grid',banks.length,'BDT',2,ranks[bank.id]??'']);
+ return Transfer.csv([[...Transfer.BANK_COLUMNS,'Bank order'],...rows]);
+}
+
+test('numbered Bank Info CSV orders icons and both layouts through replace and merge without changing account details',async context=>{
+ const legacy={...account,id:'legacy-ordered-bank',bankId:'',bankName:'AB BANK LIMITED',accountTitle:'Alias Holder'},city={...account,id:'city-ordered-bank',bankId:'city-bank-plc',bankName:'City Bank PLC',accountTitle:'City Holder'},banks=[account,legacy,city];
+ const app=await boot(context,{banks}),custom=orderedBankCSV(banks,{[account.id]:2,[legacy.id]:2,[city.id]:1}),expected=['bank:city-bank-plc','bank:ab-bank-plc'];
+ await app.click({nav:'bank-information'});const originalAssets=app.saved().assets;
+ for(const mode of ['replace','merge']){
+  await app.importFile(orderedBankCSV(banks),'banks.csv');await app.click({action:'apply-import',mode:'replace'});
+  const originalBanks=app.saved().bankAccounts;
+  assert.deepEqual(bankIconOrder(app.node('app').innerHTML),['bank:ab-bank-plc','bank:city-bank-plc']);
+  await app.click({action:'bank-filter',value:'bank:ab-bank-plc'});
+  await app.importFile(custom,'banks.csv');await app.click({action:'apply-import',mode});
+  assert.deepEqual(app.saved().bankInformationOrder,expected,mode+' saves the supplied bank order');
+  assert.deepEqual(bankIconOrder(app.node('app').innerHTML),expected);
+  assert.deepEqual(bankGroupOrder(app.node('app').innerHTML),['bank:ab-bank-plc'],'Applying an order keeps the selected bank filter');
+  await app.click({action:'bank-filter',value:''});
+  for(const view of ['card','grid']){await app.click({action:'bank-layout',value:view});assert.deepEqual(bankGroupOrder(app.node('app').innerHTML),expected);assert.deepEqual(bankIconOrder(app.node('app').innerHTML),expected);}
+  assert.deepEqual(app.saved().bankAccounts,originalBanks,'Ranks do not change account details or merge conflicting data');assert.deepEqual(app.saved().assets,originalAssets);
+ }
+});
+
+test('saved custom bank order survives opening, exports and full JSON restore, while category imports preserve or clear it explicitly',async context=>{
+ const city={...account,id:'city-reloaded-bank',bankId:'city-bank-plc',bankName:'City Bank PLC'},banks=[account,city],order=['bank:city-bank-plc','bank:ab-bank-plc'];
+ const app=await boot(context,{banks,settings:{bankInformationOrder:order}});await app.click({nav:'bank-information'});
+ assert.deepEqual(bankIconOrder(app.node('app').innerHTML),order,'Opening a saved workspace restores bank order');
+ await app.click({nav:'backup'});await app.click('export-banks-csv');const bankText=await app.server.downloads.at(-1).blob.text();
+ assert.match(bankText,/"Bank order"/);assert.deepEqual(readBackupFile(bankText).backup.data.bankInformationOrder,order,'The downloaded CSV retains the custom numbered order');
+ await app.click('export-json');const fullText=await app.server.downloads.at(-1).blob.text();
+ assert.deepEqual(normalizeBackup(fullText).data.bankInformationOrder,order);
+ await app.importFile(Transfer.depositsCSV(app.saved()),'deposits.csv');await app.click({action:'apply-import',mode:'replace'});assert.deepEqual(app.saved().bankInformationOrder,order,'A deposits CSV does not change bank order');
+ await app.importFile(Transfer.bankAccountsCSV(app.saved()),'old-banks.csv');await app.click({action:'apply-import',mode:'replace'});assert.deepEqual(app.saved().bankInformationOrder,order,'A legacy bank CSV without the column keeps current order');
+ await app.importFile(orderedBankCSV(banks),'banks.csv');await app.click({action:'apply-import',mode:'merge'});assert.deepEqual(app.saved().bankInformationOrder,[],'An explicitly blank Bank order column returns to alphabetical order');
+ await app.click({nav:'bank-information'});assert.deepEqual(bankGroupOrder(app.node('app').innerHTML),['bank:ab-bank-plc','bank:city-bank-plc']);
+ await app.importFile(fullText,'full-backup.json');await app.click({action:'apply-import',mode:'replace'});assert.deepEqual(app.saved().bankInformationOrder,order);assert.deepEqual(bankGroupOrder(app.node('app').innerHTML),order);
+});
+
+test('custom bank order and its pending import stay inside the verified account workspace',async context=>{
+ const city={...account,id:'city-private-order',bankId:'city-bank-plc',bankName:'City Bank PLC'},banks=[account,city],order=['bank:city-bank-plc','bank:ab-bank-plc'];
+ const app=await boot(context,{banks,settings:{bankInformationOrder:order}});await app.click({nav:'bank-information'});
+ await app.importFile(orderedBankCSV(banks,{[account.id]:1,[city.id]:2}),'banks.csv');const staleApply={...app.actionData('apply-import'),mode:'replace'},beforeAlice=app.workspace();
+ await app.switchToBob();const beforeBob=app.saved();await app.click(staleApply);
+ assert.deepEqual(app.saved(),beforeBob);assert.deepEqual(app.workspace(alice),beforeAlice);assert.equal(app.saved().bankInformationOrder,undefined);
+ await app.click({nav:'bank-information'});assert.deepEqual(bankIconOrder(app.node('app').innerHTML),['bank:ab-bank-plc']);assert.doesNotMatch(app.node('app').innerHTML,/City Bank PLC|city-private-order/);
 });

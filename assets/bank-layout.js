@@ -5,7 +5,7 @@ const normalized=value=>String(value||'').toLocaleLowerCase('en').replace(/[.,'â
 const banksById=new Map(BankCatalog.map(bank=>[bank.id,bank])),banksByName=new Map();
 for(const bank of BankCatalog)for(const name of [bank.name,...(bank.aliases||[])])banksByName.set(normalized(name),bank);
 
-export function groupedBankAccounts(accounts=[]){
+export function groupedBankAccounts(accounts=[],order=[]){
  const groups=new Map();
  for(const account of accounts){
   const bank=banksById.get(account.bankId)||banksByName.get(normalized(account.bankName)),key=bank?'bank:'+bank.id:'name:'+normalized(account.bankName);
@@ -13,5 +13,7 @@ export function groupedBankAccounts(accounts=[]){
   groups.get(key).accounts.push(account);
  }
  const compare=(a,b)=>['accountTitle','branchName','accountType','accountNumber','id'].reduce((order,field)=>order||String(a[field]||'').localeCompare(String(b[field]||''),'en',{sensitivity:'base'}),0);
- return [...groups.values()].sort(compareName).map(group=>({...group,accounts:group.accounts.slice().sort(compare)}));
+ const positions=new Map();
+ if(Array.isArray(order))for(const key of order.slice(0,500))if(typeof key==='string'&&!positions.has(key))positions.set(key,positions.size);
+ return [...groups.values()].sort((a,b)=>(positions.get(a.key)??500)-(positions.get(b.key)??500)||compareName(a,b)).map(group=>({...group,accounts:group.accounts.slice().sort(compare)}));
 }
