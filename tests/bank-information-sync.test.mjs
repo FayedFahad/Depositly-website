@@ -9,7 +9,7 @@ import {encryptCookie} from '../server/auth-session.mjs';
 import {createCloudSync} from '../assets/cloud-sync.js';
 
 const Sync=globalThis.DepositlySync,copy=value=>JSON.parse(JSON.stringify(value));
-const account={id:'bank_one',bankId:'ab-bank-plc',bankName:'AB Bank PLC',accountTitle:'Sample Holder',accountNumber:'001234567890',branchName:'Main Branch',routingNumber:'000123456',accountType:'Savings'};
+const account={id:'bank_one',bankId:'ab-bank-plc',bankName:'AB Bank PLC',accountTitle:'Sample Holder',accountNumber:'001234567890',branchName:'Main Branch',routingNumber:'000123456',accountType:'Savings',note:'Private account note\nSecond line'};
 const snapshot=(bankAccounts=[account])=>createCloudBackup({...emptyState(),bankAccounts},{enabled:true,time:'10:30'});
 const documentBackup=(accounts=[account])=>Sync.backup(Sync.create(snapshot(accounts),'phone',1));
 
@@ -19,11 +19,20 @@ test('bank details survive native-compatible registry edits, deletion and explic
  assert.equal(read.data.bankAccounts[0].accountNumber,'001234567890');
  assert.equal(read.data.bankAccounts[0].routingNumber,'000123456');
  assert.equal(read.data.bankAccounts[0].branchName,'Updated Branch');
+ assert.equal(read.data.bankAccounts[0].note,account.note);
  assert.deepEqual(read.notificationSettings,{enabled:true,time:'10:30'});
  const removed=Sync.change(edited,Sync.backup(edited),snapshot([]),'website',3);
  assert.deepEqual(normalizeBackup(Sync.backup(Sync.merge(seed,edited,removed))).data.bankAccounts,[]);
  const restored=Sync.change(removed,Sync.backup(removed),base,'restore',4);
  assert.deepEqual(normalizeBackup(Sync.backup(restored)).data.bankAccounts,[account]);
+});
+
+test('registry sync retains note-only updates and clearing an optional note',()=>{
+ const original=snapshot(),seed=Sync.create(original,'web',1),changed=snapshot([{...account,note:'Updated note\nWith details'}]);
+ const edited=Sync.change(seed,original,changed,'web',2),merged=normalizeBackup(Sync.backup(Sync.merge(seed,edited)));
+ assert.equal(merged.data.bankAccounts[0].note,changed.data.bankAccounts[0].note);
+ const {note,...withoutNote}=account,next=snapshot([withoutNote]),cleared=Sync.change(edited,Sync.backup(edited),next,'web',3);
+ assert.deepEqual(normalizeBackup(Sync.backup(Sync.merge(seed,edited,cleared))).data.bankAccounts,[withoutNote]);
 });
 
 test('immutable Drive versions retain bank information and can restore earlier account details',async()=>{
@@ -40,11 +49,12 @@ test('immutable Drive versions retain bank information and can restore earlier a
   return path.includes('fields=')?value.file:value.backup;
  }});
  const original=documentBackup(),first=await drive.save(original);
- const altered=snapshot([{...account,accountTitle:'Edited Holder',accountType:'Current'}]);
+ const altered=snapshot([{...account,accountTitle:'Edited Holder',accountType:'Current',note:'Updated private note\nAnother line'}]);
  const second=await drive.save(Sync.backup(Sync.change(original.sync,original,altered,'web',2)),[first.file.id]);
  const latest=await drive.read();
  assert.deepEqual(latest.heads,[second.file.id]);
  assert.equal(latest.backup.data.bankAccounts[0].accountTitle,'Edited Holder');
+ assert.equal(latest.backup.data.bankAccounts[0].note,altered.data.bankAccounts[0].note);
  const dated=await drive.version(first.file.id);
  assert.deepEqual(dated.backup.data.bankAccounts,[account]);
  const restored=Sync.change(latest.backup.sync,latest.backup,dated.backup,'restore',3);
@@ -68,6 +78,7 @@ test('bank lists stay isolated across verified account workspaces and the signed
  assert.equal(manager.openGuest().data.bankAccounts[0].accountTitle,'Guest Holder');
  const reopened=createAccountWorkspaces({storage});
  assert.equal(reopened.openAccount(alpha).data.bankAccounts[0].accountNumber,'001234567890');
+ assert.equal(reopened.openAccount(alpha).data.bankAccounts[0].note,account.note);
 });
 
 test('a pending sync cannot apply one account’s bank details after switching accounts',async()=>{
@@ -125,6 +136,16 @@ test('authenticated server rejects malformed balances and retains exact valid ba
  for(const balance of [-1,0.1,'1200',null,1e13+1]){const backup=documentBackup();backup.sync.entries['p/bankAccounts'].v[0].balance=balance;const response=await api.save(backup);assert.equal(response.statusCode,400);assert.equal(response.body.error.code,'INVALID_BACKUP');}
  assert.equal(api.writes,0);
  const saved=await api.save(documentBackup([{...account,balance:123456}]));assert.equal(saved.statusCode,200);assert.equal(saved.body.backup.data.bankAccounts[0].balance,123456);assert.equal(api.writes,1);
+});
+
+test('authenticated server validates optional bank notes and preserves exact multiline text',async()=>{
+ const api=apiHarness();
+ for(const note of [null,123,[],{},'a'.repeat(501)]){
+  const backup=documentBackup();backup.sync.entries['p/bankAccounts'].v[0].note=note;
+  const response=await api.save(backup);assert.equal(response.statusCode,400);assert.equal(response.body.error.code,'INVALID_BACKUP');
+ }
+ assert.equal(api.writes,0);
+ const saved=await api.save(documentBackup());assert.equal(saved.statusCode,200);assert.equal(saved.body.backup.data.bankAccounts[0].note,account.note);assert.equal(api.writes,1);
 });
 
 test('bank information sign-in preserves its exact local route and rejects unsafe return targets',async()=>{

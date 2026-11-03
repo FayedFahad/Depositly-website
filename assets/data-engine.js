@@ -83,7 +83,7 @@ const isObject=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function validDate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&root.FDR.iso(root.FDR.parse(s))===s&&s>='1900-01-01'&&s<='2199-12-31';}
 function text(v,max,optional=false){return (optional&&v===undefined)||(typeof v==='string'&&v.length<=max);}
 function bankText(value,max,optional=false){return optional&&value===undefined||typeof value==='string'&&value.length<=max&&!/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(value)&&(optional||value.trim().length>0);}
-function validBankAccount(a){return isObject(a)&&typeof a.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(a.id)&&bankText(a.bankId,100,true)&&bankText(a.bankName,150)&&bankText(a.accountTitle,120)&&bankText(a.accountNumber,100)&&bankText(a.branchName,150)&&bankText(a.routingNumber,100)&&bankText(a.accountType,100,true)&&(a.balance===undefined||Number.isSafeInteger(a.balance)&&a.balance>=0&&a.balance<=MAX_MONEY);}
+function validBankAccount(a){return isObject(a)&&typeof a.id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(a.id)&&bankText(a.bankId,100,true)&&bankText(a.bankName,150)&&bankText(a.accountTitle,120)&&bankText(a.accountNumber,100)&&bankText(a.branchName,150)&&bankText(a.routingNumber,100)&&bankText(a.accountType,100,true)&&text(a.note,500,true)&&(a.balance===undefined||Number.isSafeInteger(a.balance)&&a.balance>=0&&a.balance<=MAX_MONEY);}
 function validBankAccountId(value){return value===undefined||typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value);}
 function validBankAccountSnapshot(value){return isObject(value)&&bankText(value.bankName,150)&&bankText(value.accountTitle,120)&&bankText(value.accountNumber,100);}
 function validReceivingAccount(meta){return validBankAccountId(meta.bankAccountId)&&(meta.bankAccountSnapshot===undefined||meta.bankAccountId!==undefined&&validBankAccountSnapshot(meta.bankAccountSnapshot));}
@@ -146,7 +146,7 @@ function merge(current,incoming,preview=false){
  if(currencyMismatch&&!preview)throw Error('Currencies differ. Select '+normalizedCurrency(incoming.currency)+' in Settings before merging, or replace using the file’s currency. Amounts are not converted.');
  const result=JSON.parse(JSON.stringify(current)),byId=new Map(result.assets.map(a=>[a.id,a]));let added=0,duplicates=0,conflicts=0,payments=0,paymentConflicts=0,bankAdded=0,bankDuplicates=0,bankConflicts=0;
  result.bankAccounts=result.bankAccounts||[];
- const banksById=new Map(result.bankAccounts.map(a=>[a.id,a])),bankFields=['bankId','bankName','accountTitle','accountNumber','branchName','routingNumber','accountType','balance'],bankValue=(a,field)=>a[field]??(field==='balance'?0:'');
+ const banksById=new Map(result.bankAccounts.map(a=>[a.id,a])),bankFields=['bankId','bankName','accountTitle','accountNumber','branchName','routingNumber','accountType','note','balance'],bankValue=(a,field)=>a[field]??(field==='balance'?0:'');
  for(const a of incoming.bankAccounts||[]){const old=banksById.get(a.id);if(!old){const copy={...a};result.bankAccounts.push(copy);banksById.set(a.id,copy);bankAdded++;}else if(bankFields.every(field=>bankValue(old,field)===bankValue(a,field)))bankDuplicates++;else bankConflicts++;}
  if(result.bankAccounts.length>500)throw Error('Import would exceed the 500-bank-account limit.');
  result.currency=normalizedCurrency(currentMoney||!incomingMoney?current.currency:incoming.currency);result.numberFormat=current.numberFormat||incoming.numberFormat||'south-asian';
@@ -217,7 +217,7 @@ function isBackupCSV(input){return input.replace(/^\ufeff/,'').startsWith('"'+BA
 // Each row uses named field columns. A deposit repeats when it has multiple receipts.
 const DEPOSIT_FIELDS=[['Deposit ID','id'],['Deposit type','type','type'],['Investment name','name'],["Owner's name",'ownerName'],['Ownership','ownership','ownership'],['Bank ID','bankId'],['Bank name','bankName'],['Deposit / certificate number','reference'],['Principal','principal','money'],['Annual interest rate %','rate','number'],['TDS %','tds','number'],['Payout cycle value','cycle','number'],['Payout cycle unit','cycleUnit'],['Opening date','start'],['First payout date','first'],['Maturity date','maturity'],['Tenure value','tenureCount','optional-number'],['Tenure unit','tenureUnit'],['Automatic renewal','autoRenew','boolean'],['Renewal stop date','renewalStop'],['Receiving bank account ID','bankAccountId'],['Interest type','interestType'],['Notes','notes']];
 const RECEIPT_FIELDS=[['Receipt ID','id'],['Received amount','amount','money'],['Received date','date'],['Receipt notes','notes'],['Receipt investment name','name'],['Receipt investment type','type','type'],['Scheduled payment date','scheduledDate'],['Payment kind','kind'],['Gross interest','gross','money'],['Tax deducted','tax','money'],['Expected net amount','expected','money'],['Principal returned','principal','money'],['Receipt receiving bank account ID','bankAccountId'],['Receipt receiving bank name','bankName'],['Receipt receiving account title','accountTitle'],['Receipt receiving account number','accountNumber']];
-const BANK_FIELDS=[['Bank account ID','id'],['Bank ID','bankId'],['Bank name','bankName'],['Account title','accountTitle'],['Account number','accountNumber'],['Branch name','branchName'],['Routing number','routingNumber'],['Account type','accountType'],['Current balance','balance','money']];
+const BANK_FIELDS=[['Bank account ID','id'],['Bank ID','bankId'],['Bank name','bankName'],['Account title','accountTitle'],['Account number','accountNumber'],['Branch name','branchName'],['Routing number','routingNumber'],['Account type','accountType'],['Note','note'],['Current balance','balance','money']];
 const DEPOSIT_SETTINGS=['Currency','Number format','Dark mode','Deposit view','Reminder enabled','Reminder time','Deposit count','Receipt count','CSV backup version'];
 const BANK_SETTINGS=['Bank view','Bank account count','Currency','CSV backup version'];
 const DEPOSIT_COLUMNS=[...DEPOSIT_FIELDS.map(f=>f[0]),...RECEIPT_FIELDS.map(f=>f[0]),...DEPOSIT_SETTINGS];
@@ -255,9 +255,10 @@ function depositsCSV(state,notificationSettings){
  return checkedCSV(rows);
 }
 function bankAccountsCSV(state){
- const data=migrate(exportData(state)),settings=[['card','grid'].includes(state.bankInformationView)?state.bankInformationView:'card',data.bankAccounts.length,data.currency,2],rows=[BANK_COLUMNS];
- for(const account of data.bankAccounts)rows.push([...fieldValues(account,BANK_FIELDS),...settings]);
- if(!data.bankAccounts.length)rows.push([...Array(BANK_FIELDS.length).fill(''),...settings]);
+ // Older phone readers accept the existing columns when no notes need exporting.
+ const data=migrate(exportData(state)),fields=data.bankAccounts.some(account=>account.note)?BANK_FIELDS:BANK_FIELDS.filter(([,key])=>key!=='note'),settings=[['card','grid'].includes(state.bankInformationView)?state.bankInformationView:'card',data.bankAccounts.length,data.currency,2],rows=[[...fields.map(([label])=>label),...BANK_SETTINGS]];
+ for(const account of data.bankAccounts)rows.push([...fieldValues(account,fields),...settings]);
+ if(!data.bankAccounts.length)rows.push([...Array(fields.length).fill(''),...settings]);
  return checkedCSV(rows);
 }
 function namedCSV(input,columns,maxRows,optionalColumns=[]){
@@ -291,7 +292,7 @@ function readDepositsCSV(input){
  return migrate({version:VERSION,assets:[...byId.values()],paid,bankAccounts:[],currency:normalizedCurrency(currency),numberFormat,dark:dark==='Yes',defaultDepositView:view,notificationSettings:{enabled:enabled==='Yes',time}});
 }
 function readBankAccountsCSV(input){
- const {extras,records}=namedCSV(input,BANK_COLUMNS,501,['Current balance','Currency']),bankAccounts=[];let settings=null;
+ const {extras,records}=namedCSV(input,BANK_COLUMNS,501,['Note','Current balance','Currency']),bankAccounts=[];let settings=null;
  if(extras.length)throw Error('Unexpected bank CSV columns.');
  for(const get of records){const current=BANK_SETTINGS.map(get);if(settings&&JSON.stringify(settings)!==JSON.stringify(current))throw Error('Bank CSV rows have conflicting settings or totals.');settings=current;const a=readFields(get,BANK_FIELDS);if(!a.id){if(records.length!==1||BANK_FIELDS.some(([h])=>get(h)!==''))throw Error('A bank account is missing its ID.');}else bankAccounts.push(a);}
  const [view,count,currency]=settings;if(!['card','grid'].includes(view)||! /^(0|[1-9]\d*)$/.test(count)||Number(count)!==bankAccounts.length)throw Error('Bank CSV is incomplete or has invalid settings.');

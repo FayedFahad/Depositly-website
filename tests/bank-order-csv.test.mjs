@@ -9,7 +9,7 @@ const accounts=[account,{...account,id:'ab-legacy',bankId:'',bankName:'AB BANK L
 const source={...emptyState(),bankAccounts:accounts,bankInformationView:'grid'};
 const order=['bank:city-bank-plc','bank:ab-bank-plc'];
 function orderedCSV(ranks,{column=true}={}){
- return Transfer.csv([[...Transfer.BANK_COLUMNS,...(column?['Bank order']:[])],...accounts.map((bank,index)=>[bank.id,bank.bankId,bank.bankName,bank.accountTitle,bank.accountNumber,bank.branchName,bank.routingNumber,bank.accountType,bank.balance/100,'grid',accounts.length,'BDT',2,...(column?[ranks[index]??'']:[])])]);
+ return Transfer.csv([[...Transfer.BANK_COLUMNS,...(column?['Bank order']:[])],...accounts.map((bank,index)=>[bank.id,bank.bankId,bank.bankName,bank.accountTitle,bank.accountNumber,bank.branchName,bank.routingNumber,bank.accountType,bank.note??'',bank.balance/100,'grid',accounts.length,'BDT',2,...(column?[ranks[index]??'']:[])])]);
 }
 const apply=(current,file,mode='replace')=>applyBackupFile(current,file.backup,{kind:file.kind,preservesBanks:file.preservesBanks,mode});
 
@@ -30,6 +30,13 @@ test('ordered CSV export follows display groups and has blank ranks for unranked
  const reset=readBackupFile(exportBankInformationCSV(source));assert.deepEqual(reset.backup.data.bankInformationOrder,[]);
  const invalidPreference=readBackupFile(exportBankInformationCSV({...source,bankInformationOrder:['unknown','bank:city-bank-plc','bank:city-bank-plc',null]}));
  assert.deepEqual(invalidPreference.backup.data.bankInformationOrder,['bank:city-bank-plc']);
+});
+
+test('ordered bank CSV keeps notes and their existing escaping intact',()=>{
+ const noted={...source,bankAccounts:accounts.map((bank,index)=>({...bank,note:index?'Second account\nPrivate note':'=Private, "quoted" note\nSecond line'})),bankInformationOrder:order};
+ const restored=readBackupFile(exportBankInformationCSV(noted));
+ assert.deepEqual(restored.backup.data.bankAccounts,groupedBankAccounts(noted.bankAccounts,order).flatMap(group=>group.accounts));
+ assert.deepEqual(restored.backup.data.bankInformationOrder,order);
 });
 
 test('bank CSV merge changes order without replacing conflicting records or unrelated settings',()=>{

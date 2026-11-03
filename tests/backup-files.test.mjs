@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Transfer,emptyState,createCloudBackup} from '../assets/data-engine.js';
 import {readBackupFile,applyBackupFile} from '../assets/backup-files.js';
 
-const bank={id:'bank-a',bankId:'ab-bank-plc',bankName:'AB Bank PLC',accountTitle:'=Private "Holder"',accountNumber:'000012345',branchName:'Main, North',routingNumber:'000000012',accountType:'Savings',balance:12345};
+const bank={id:'bank-a',bankId:'ab-bank-plc',bankName:'AB Bank PLC',accountTitle:'=Private "Holder"',accountNumber:'000012345',branchName:'Main, North',routingNumber:'000000012',accountType:'Savings',note:'Private note, "verified"\nKeep both lines',balance:12345};
 const deposit={id:'deposit-a',name:'Deposit, "One"',type:'FDR',ownership:'self',ownerName:'Holder',principal:1000000,rate:10,tds:10,cycle:1,cycleUnit:'months',start:'2026-01-01',first:'2026-02-01',maturity:'2027-01-01',bankAccountId:bank.id,reference:'000123',notes:'First line\nSecond line'};
 const receipt={amount:7500,date:'2026-02-02',notes:'Paid, verified',snapshot:{assetId:deposit.id,name:deposit.name,type:deposit.type,scheduledDate:'2026-02-01',kind:'Interest',gross:8333,tax:833,expected:7500,principal:0,bankAccountId:bank.id,bankAccountSnapshot:{bankName:'Historical Bank',accountTitle:'Recorded holder',accountNumber:'000009876'}}};
 const reminders={enabled:true,time:'07:45'};
@@ -33,6 +33,23 @@ test('named CSV backups detect contents and preserve complete deposits, receipts
  assert(!Transfer.depositsCSV(source,reminders).includes(bank.accountNumber));assert(!Transfer.bankAccountsCSV(source).includes(deposit.name));
  assert.deepEqual(readBackupFile(' \r\n'+Transfer.bankAccountsCSV(source)).backup.data.bankAccounts,source.bankAccounts);
  assert.throws(()=>readBackupFile(Transfer.bankAccountsCSV(source).replace('"Routing number"','"Missing header"')),/Routing number/);
+});
+
+test('bank CSV notes preserve multiline text and formula escaping while legacy files remain accepted',()=>{
+ for(const note of ['First line\nSecond line, "quoted"', '=Private note\nSecond line', "'Literal apostrophe", 'a'.repeat(500)]){
+  const state={...emptyState(),bankAccounts:[{...bank,note}]},text=Transfer.bankAccountsCSV(state);
+  assert.match(text,/"Note"/);
+  assert.deepEqual(readBackupFile(text).backup.data.bankAccounts,state.bankAccounts);
+ }
+ const {note,...legacy}=bank,state={...emptyState(),bankAccounts:[legacy]};
+ const text=Transfer.bankAccountsCSV(state);
+ assert.doesNotMatch(text,/"Note"/,'Exports without notes retain the existing phone-compatible columns');
+ assert.deepEqual(readBackupFile(text).backup.data.bankAccounts,[legacy]);
+ const blank=Transfer.csv([[...Transfer.BANK_COLUMNS], [legacy.id,legacy.bankId,legacy.bankName,legacy.accountTitle,legacy.accountNumber,legacy.branchName,legacy.routingNumber,legacy.accountType,'',legacy.balance/100,'card',1,'BDT',2]]);
+ assert.deepEqual(readBackupFile(blank).backup.data.bankAccounts,[legacy],'An explicitly empty optional Note column is accepted');
+ const invalid=Transfer.csv([[...Transfer.BANK_COLUMNS], [legacy.id,legacy.bankId,legacy.bankName,legacy.accountTitle,legacy.accountNumber,legacy.branchName,legacy.routingNumber,legacy.accountType,'a'.repeat(501),legacy.balance/100,'card',1,'BDT',2]]);
+ assert.throws(()=>readBackupFile(invalid),/bank account/);
+ assert.equal(Transfer.depositsCSV(source,reminders).includes(bank.note),false,'Bank notes remain outside deposit-only CSVs');
 });
 
 test('deposit CSV replacement keeps current banks and bank view while restoring its included settings',()=>{

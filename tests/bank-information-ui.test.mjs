@@ -113,6 +113,49 @@ test('invalid fields and failed storage writes keep bank forms and durable recor
  app.server.failWrites=false;
 });
 
+test('optional bank notes save privately and open only in account details in both layouts',async context=>{
+ const app=await boot(context);await app.click({nav:'bank-information'});await app.click('add-bank-account');
+ const input=app.node('modal').innerHTML.match(/<textarea\b[^>]*name="note"[^>]*>/)?.[0];
+ assert(input);assert.match(input,/id="account-note"/);assert.match(input,/maxlength="500"/);assert.doesNotMatch(input,/\brequired\b/);
+ assert.match(app.node('modal').innerHTML,/<label for="account-note">Note \(optional\)<\/label>/);
+ const note='Quarterly statement\nContact <branch> & ask for "service".';
+ await app.submit({...fields,note:'  '+note+'  '});
+ const saved=app.saved().bankAccounts[0];assert.equal(saved.note,note);
+ for(const view of ['card','grid']){
+  await app.click({action:'bank-layout',value:view});
+  const html=app.node('app').innerHTML;
+  assert.doesNotMatch(html,/Quarterly statement|bank-account-note/);
+  assert.match(html,/<article class="card bank-account-card"[^>]*data-action="bank-account-detail"/);
+  assert.match(html,/<button[^>]*class="bank-account-title"[^>]*aria-haspopup="dialog"/);
+  await app.click({action:'bank-account-detail',id:saved.id});
+  assert.match(app.node('modal').innerHTML,/<h3>Note<\/h3><p>Quarterly statement\nContact &lt;branch&gt; &amp; ask for &quot;service&quot;\.<\/p>/);
+  await app.click('close-modal');
+ }
+ await app.click({action:'bank-account-detail',id:saved.id});await app.click({action:'share-bank-account',id:saved.id});assert.equal(app.server.shared[0].text,shareText);
+});
+
+test('bank notes can be edited and cleared while old accounts need no note',async context=>{
+ const note='First line\n</textarea><script>unsafe()</script>',app=await boot(context,{banks:[{...account,note}]});
+ await app.click({nav:'bank-information'});await app.click({action:'edit-bank-account',id:account.id});
+ assert.equal(app.node('account-note').value,note);assert.doesNotMatch(app.node('modal').innerHTML,/<script>unsafe/);
+ await app.submit({...fields,note:'Updated note'});assert.equal(app.saved().bankAccounts[0].note,'Updated note');
+ await app.click({action:'edit-bank-account',id:account.id});await app.submit({...fields,note:'   '});assert.equal(app.saved().bankAccounts[0].note,'');
+ await app.click({action:'bank-account-detail',id:account.id});assert.doesNotMatch(app.node('modal').innerHTML,/bank-account-note/);
+ await app.click({action:'edit-bank-account',id:account.id});await app.submit(fields);assert.equal(app.node('modal').open,false);
+ assert.equal(app.saved().bankAccounts.length,1);
+});
+
+test('oversized bank notes do not save and stale details cannot disclose notes after an account switch',async context=>{
+ const app=await boot(context,{banks:[{...account,note:'ALICE_PRIVATE_NOTE'}]});
+ await app.click({nav:'bank-information'});await app.click({action:'edit-bank-account',id:account.id});
+ const before=app.saved();await app.submit({...fields,note:'x'.repeat(501)});
+ assert.deepEqual(app.saved(),before);assert.equal(app.node('modal').open,true);assert.equal(app.node('form-error').hidden,false);
+ await app.click('close-modal');const staleDetail=app.actionData('bank-account-detail',account.id);
+ await app.click({action:'bank-account-detail',id:account.id});assert.match(app.node('modal').innerHTML,/ALICE_PRIVATE_NOTE/);
+ await app.switchToBob();await app.click(staleDetail);
+ assert.equal(app.node('modal').open,false);assert.doesNotMatch(app.node('app').innerHTML,/ALICE_PRIVATE_NOTE/);
+});
+
 test('saving a real bank account from the demo starts an empty guest workspace without fictional deposits',async context=>{
  const app=await boot(context,{guest:true});await app.click({nav:'bank-information'});await app.click('add-bank-account');await app.submit(fields);
  assert.equal(app.saved().bankAccounts.length,1);assert.equal(app.saved().bankAccounts[0].accountTitle,'Alice Example');assert.deepEqual(app.saved().assets,[]);assert.doesNotMatch(app.node('app').innerHTML,/Demo workspace/);
@@ -419,7 +462,7 @@ test('a newer file selection wins over an older read and an invalid file cannot 
 const bankIconOrder=html=>[...html.matchAll(/<button\b[^>]*data-action="bank-filter"[^>]*>/g)].map(match=>decodeHTML(dataAttributes(match[0]).value||'')).filter(Boolean);
 const bankGroupOrder=html=>[...html.matchAll(/data-bank-group="([^"]*)"/g)].map(([,key])=>decodeHTML(key));
 function orderedBankCSV(banks,ranks={}){
- const rows=banks.map(bank=>[bank.id,bank.bankId,bank.bankName,bank.accountTitle,bank.accountNumber,bank.branchName,bank.routingNumber,bank.accountType,bank.balance===undefined?'':bank.balance/100,'grid',banks.length,'BDT',2,ranks[bank.id]??'']);
+ const rows=banks.map(bank=>[bank.id,bank.bankId,bank.bankName,bank.accountTitle,bank.accountNumber,bank.branchName,bank.routingNumber,bank.accountType,bank.note??'',bank.balance===undefined?'':bank.balance/100,'grid',banks.length,'BDT',2,ranks[bank.id]??'']);
  return Transfer.csv([[...Transfer.BANK_COLUMNS,'Bank order'],...rows]);
 }
 

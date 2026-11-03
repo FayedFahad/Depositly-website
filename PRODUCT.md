@@ -21,7 +21,7 @@ Users enter records in the browser or transfer Android-compatible backups throug
 ## Capabilities and Constraints
 
 - Preserve deposits, receipts, calendar, exports, import review, account isolation, and preferences.
-- Bank information supports an offline bank dropdown and logos, account title, account number, branch, routing number, optional free-text account type, editing/deletion, and text sharing. Full JSON and Google backups share these records with Android; deposit-only imports preserve them.
+- Bank information supports an offline bank dropdown and logos, account title, account number, branch, routing number, optional free-text account type and Note, editing/deletion, and text sharing. Notes appear only in opened account details, never on cards or in shared account text. Full JSON and Google backups share these records with Android; deposit-only imports preserve them.
 - Group saved accounts by bank. Provide Cards and Grid layouts with a saved selection shared with Android, and exact-text copy controls beside account/routing numbers in records and forms. Bank Information titles use a capital I.
 - Match Android calculations: calendar cycles use months / 12, day cycles use exact days / 360, and TDS applies to interest. Compound deposits capitalize net interest only at renewal maturity; savings certificates never renew. Preserve receipts when repairing legacy schedules.
 - Match Android deposit inputs, payout/tenure presets and custom units. Derive first payout and maturity from the issue date, payout cycle and tenure; show these dates in the preview. Use the Android scheduler directly for all website cash views. Keep explicit custom 90-day cycles and day-based tenures when editing.

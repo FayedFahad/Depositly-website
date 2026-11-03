@@ -37,6 +37,35 @@ test('bank account validation rejects malformed lists and single-line fields', (
   }
 });
 
+test('optional bank notes accept bounded multiline text and survive edits and full backups', () => {
+  for (const note of [undefined, '', '  ', 'First line\nSecond line\twith details', 'a'.repeat(500)]) assert.equal(Transfer.validBankAccount({...sample, note}), true);
+  for (const note of [null, 123, [], {}, 'a'.repeat(501)]) {
+    assert.equal(Transfer.validBankAccount({...sample, note}), false);
+    assert.throws(() => Transfer.migrate({...emptyState(), bankAccounts: [{...sample, note}]}), /bank account/);
+  }
+  const note = 'Private bank note\nSecond line with <details> & "quotes"', account = {...sample, note};
+  const state = upsertBankAccount(emptyState(), account), edited = upsertBankAccount(state, {...account, note: 'Updated note'});
+  assert.equal(state.bankAccounts[0].note, note);
+  assert.equal(edited.bankAccounts[0].note, 'Updated note');
+  assert.equal(upsertBankAccount(edited, {...account, note: ''}).bankAccounts[0].note, '');
+  assert.deepEqual(Transfer.migrate(json(Transfer.exportData(state))).bankAccounts, [account]);
+  assert.deepEqual(normalizeBackup(json(createCloudBackup(state))).data.bankAccounts, [account]);
+  assert.equal(JSON.stringify(Transfer.exportData(state, [])).includes(note), false);
+  assert.equal(bankAccountText(account), bankAccountText(sample), 'Personal notes are excluded from shared account details');
+});
+
+test('bank note differences count as import conflicts while omitted and blank notes are equivalent', () => {
+  const state = {...emptyState(), bankAccounts: [{...sample, note: 'Keep this note'}]};
+  for (const note of [undefined, '', 'Incoming note']) {
+    const merged = Transfer.merge(state, {...emptyState(), bankAccounts: [{...sample, note}]});
+    assert.equal(merged.bankConflicts, 1);
+    assert.equal(merged.bankDuplicates, 0);
+    assert.deepEqual(merged.state.bankAccounts, state.bankAccounts);
+  }
+  assert.equal(Transfer.merge(state, state).bankDuplicates, 1);
+  assert.equal(Transfer.merge({...emptyState(), bankAccounts: [sample]}, {...emptyState(), bankAccounts: [{...sample, note: ''}]}).bankDuplicates, 1);
+});
+
 test('bank CRUD preserves deposits and receipts without mutating existing account data', () => {
   const state = emptyState(), before = JSON.stringify(state), {id, ...draft} = sample;
   const added = upsertBankAccount(state, draft);
@@ -103,6 +132,9 @@ test('bank validation, backups and merge results match Android', {skip: !fs.exis
   const backup = Transfer.exportData(state, undefined, timestamp);
   assert.deepEqual(Transfer.migrate(backup), json(android.Transfer.migrate(backup)));
   assert.deepEqual(json(android.Transfer.migrate(Transfer.exportData(state)).bankAccounts), [sample]);
+  const noted = {...state, bankAccounts: [{...sample, note: 'Website note\nPreserved by the phone'}]};
+  const phoneRoundTrip = android.Transfer.exportData(android.Transfer.migrate(Transfer.exportData(noted)));
+  assert.deepEqual(Transfer.migrate(json(phoneRoundTrip)).bankAccounts, noted.bankAccounts, 'Existing phone JSON backup and sync retain unknown bank fields');
   const incoming = {...emptyState(), bankAccounts: [{...sample, id: 'bank2'}, {...sample, accountType: 'Current'}]};
   assert.deepEqual(Transfer.merge(state, incoming), json(android.Transfer.merge(state, incoming)));
 });
