@@ -42,6 +42,7 @@ test('scientific account, routing, certificate and historical account identifier
  const notation=['1.23457E+12','1e12','+1.5e+12','-2E2','.5e12','1.E+12',' 1.5E12 '];
  for(const value of notation){
   assert.throws(()=>Transfer.bankAccountsCSV({...state,bankAccounts:[{...bank,accountNumber:value}]}),/Account number is in scientific notation/,'Exports also refuse identifiers already stored in scientific notation');
+  assert.throws(()=>Transfer.instrumentCSV({...state,assets:[{...deposit,reference:value}]}),/Certificate reference is in scientific notation/);
   const escaped=value.replace(/"/g,'""'),accountCSV=Transfer.bankAccountsCSV(state).replace('"\''+bank.accountNumber+'"','"'+escaped+'"');
   assert.throws(()=>readBackupFile(accountCSV),/Account number is in scientific notation.*original full digits.*cannot be recovered/);
   const routingCSV=Transfer.bankAccountsCSV(state).replace('"\''+bank.routingNumber+'"','"'+escaped+'"');
