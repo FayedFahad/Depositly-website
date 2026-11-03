@@ -253,7 +253,7 @@ function checkedCSV(rows){
 function depositsCSV(state,notificationSettings){
  const data=migrate(exportData(state)),n=notificationSettings||state.notificationSettings||{enabled:false,time:'09:00'},legacy=parseCSV(instrumentCSV(data)).map(row=>row.map(unescapeCSV));
  const extras=legacy[0].slice(INSTRUMENT_COLUMNS.length),extraById=new Map(legacy.slice(1).map(row=>[row[0],row.slice(INSTRUMENT_COLUMNS.length)]));
- const settings=[data.currency,data.numberFormat,data.dark?'Yes':'No',data.defaultDepositView,n.enabled?'Yes':'No',n.time||'09:00',data.assets.length,Object.keys(data.paid).length,2],rows=[[...DEPOSIT_COLUMNS,...extras.map(h=>'Extra: '+h)]];
+ const settings=[data.currency,data.numberFormat,data.dark?'Yes':'No',data.defaultDepositView,n.enabled?'Yes':'No',n.time||'09:00',data.assets.length,Object.keys(data.paid).length,3],rows=[[...DEPOSIT_COLUMNS,...extras.map(h=>'Extra: '+h)]];
  const byAsset=new Map();for(const [id,r] of Object.entries(data.paid)){const assetId=id.split(':')[0];if(!byAsset.has(assetId))byAsset.set(assetId,[]);byAsset.get(assetId).push([id,r]);}
  for(const a of data.assets){const receipts=byAsset.get(a.id)||[[null,null]];for(const [id,r] of receipts){const snapshot=r?.snapshot||{},account=snapshot.bankAccountSnapshot||{},receipt=r?{...snapshot,...account,id,amount:r.amount,date:r.date,notes:r.notes}:{};rows.push([...fieldValues(a,DEPOSIT_FIELDS),...fieldValues(receipt,RECEIPT_FIELDS),...settings,...extraById.get(a.id)]);}}
  if(!data.assets.length)rows.push([...Array(DEPOSIT_FIELDS.length+RECEIPT_FIELDS.length).fill(''),...settings,...Array(extras.length).fill('')]);
@@ -261,7 +261,7 @@ function depositsCSV(state,notificationSettings){
 }
 function bankAccountsCSV(state){
  // Older phone readers accept the existing columns when no notes need exporting.
- const data=migrate(exportData(state)),fields=data.bankAccounts.some(account=>account.note)?BANK_FIELDS:BANK_FIELDS.filter(([,key])=>key!=='note'),settings=[['card','grid'].includes(state.bankInformationView)?state.bankInformationView:'card',data.bankAccounts.length,data.currency,2],rows=[[...fields.map(([label])=>label),...BANK_SETTINGS]];
+ const data=migrate(exportData(state)),fields=data.bankAccounts.some(account=>account.note)?BANK_FIELDS:BANK_FIELDS.filter(([,key])=>key!=='note'),settings=[['card','grid'].includes(state.bankInformationView)?state.bankInformationView:'card',data.bankAccounts.length,data.currency,3],rows=[[...fields.map(([label])=>label),...BANK_SETTINGS]];
  for(const account of data.bankAccounts)rows.push([...fieldValues(account,fields),...settings]);
  if(!data.bankAccounts.length)rows.push([...Array(fields.length).fill(''),...settings]);
  return checkedCSV(rows);
@@ -273,7 +273,7 @@ function namedCSV(input,columns,maxRows,optionalColumns=[]){
  if(!rows.length)throw Error('CSV backup has no data or settings row.');
  const extras=header.filter(h=>!columns.some(c=>c.toLowerCase()===h.trim().toLowerCase()));
  if(extras.some(h=>!h.startsWith('Extra: ')||!h.slice(7).trim()))throw Error('CSV has an unrecognized column.');
- return {extras,records:rows.map(row=>{if(row.length!==header.length)throw Error('CSV row has the wrong number of columns.');const get=name=>{const index=names.indexOf(name.toLowerCase());return index<0?'':row[index];};if(get('CSV backup version')!=='2')throw Error('This CSV backup needs a newer version of Depositly.');return get;})};
+ return {extras,records:rows.map(row=>{if(row.length!==header.length)throw Error('CSV row has the wrong number of columns.');const get=name=>{const index=names.indexOf(name.toLowerCase());return index<0?'':row[index];};if(!['2','3'].includes(get('CSV backup version')))throw Error('This CSV backup needs a newer version of Depositly.');return get;})};
 }
 function readDepositsCSV(input){
  const {extras,records}=namedCSV(input,DEPOSIT_COLUMNS,600501),byId=new Map(),paid={};let settings=null;

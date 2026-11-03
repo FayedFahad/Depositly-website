@@ -38,6 +38,19 @@ test('ordered bank CSV preserves ranks and exact account details for numeric-onl
  assert.match(text,/"Bank order"/);
 });
 
+test('protected exports use CSV version 3 and still read older version 2 files',()=>{
+ for(const [exporter,reader] of [[Transfer.bankAccountsCSV,Transfer.readBankAccountsCSV],[Transfer.depositsCSV,Transfer.readDepositsCSV]]){
+  const file=exporter(state),header=file.split('\r\n')[0].split(',').map(value=>value.replace(/^"|"$/g,''));
+  const versionColumn=header.indexOf('CSV backup version'),firstRow=file.split('\r\n')[1].split(',');
+  assert.equal(firstRow[versionColumn],'"3"');
+  const legacy=file.split('\r\n').map((line,index)=>{if(index===0)return line;const cells=line.split(',');cells[versionColumn]='"2"';return cells.map(cell=>cell.replace(/^"'(\d+)"$/,'"$1"')).join(',');}).join('\r\n');
+  const original=reader(file),restored=reader(legacy);
+  assert.deepEqual(restored,original,'Unprefixed version 2 files retain their original exact identifiers');
+  const future=file.split('\r\n').map((line,index)=>{if(index===0)return line;const cells=line.split(',');cells[versionColumn]='"4"';return cells.join(',');}).join('\r\n');
+  assert.throws(()=>reader(future),/newer version/);
+ }
+});
+
 test('scientific account, routing, certificate and historical account identifiers are rejected without guessing digits',()=>{
  const notation=['1.23457E+12','1e12','+1.5e+12','-2E2','.5e12','1.E+12',' 1.5E12 '];
  for(const value of notation){
