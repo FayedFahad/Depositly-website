@@ -156,7 +156,7 @@ function merge(current,incoming,preview=false){
  for(const [k,r] of Object.entries(incoming.paid)){if(!accepted.has(k.split(':')[0]))continue;if(!result.paid[k]){result.paid[k]=r;payments++;}else if(result.paid[k].amount!==r.amount||result.paid[k].date!==r.date|| (result.paid[k].notes||'')!==(r.notes||'')||result.paid[k].snapshot?.bankAccountId!==undefined&&r.snapshot?.bankAccountId!==undefined&&result.paid[k].snapshot.bankAccountId!==r.snapshot.bankAccountId)paymentConflicts++;}
  return {state:result,added,duplicates,conflicts,payments,paymentConflicts,currencyMismatch,bankAdded,bankDuplicates,bankConflicts};
 }
-function csv(rows){return '\ufeff'+rows.map(row=>row.map(v=>{let s=String(v??'');if(typeof v==='string'&&(/^[\s]*[=+@-]/.test(s)||s.startsWith("'")))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');}
+function csv(rows){return '\ufeff'+rows.map(row=>row.map(v=>{let s=String(v??'');if(typeof v==='string'&&(/^\d+$/.test(s)||/^[\s]*[=+@-]/.test(s)||s.startsWith("'")))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');}
 const INSTRUMENT_COLUMNS=['Investment ID','Instrument type','Investment name',"Owner's name",'Ownership','Bank ID','Bank / institution','Certificate reference','Principal','Annual interest rate %','TDS %','Payout cycle','Opening date','Maturity date','First period days','Notes','Payout unit','Tenure value','Tenure unit','Automatic renewal','Renewal term limit','Currency','Bank account ID','Interest type'];
 const isPrincipalColumn=h=>/^principal(?: [a-z]{3})?$/i.test(h.trim());
 const cycleNames={1:'Monthly',3:'Quarterly',6:'Half-yearly',12:'Yearly',100:'100 Days'};
@@ -183,7 +183,7 @@ function parseCSV(input,maxRows=501){
 }
 // Read older Build 16 combined backups; new exports use separate named columns.
 const BACKUP_COLUMNS=['Depositly CSV backup version','Field path','Value type','Value'];
-const unescapeCSV=s=>s.startsWith("''")||(s.startsWith("'")&&/^[\s]*[=+@-]/.test(s.slice(1)))?s.slice(1):s;
+const unescapeCSV=s=>s.startsWith("''")||(s.startsWith("'")&&(/^\d+$/.test(s.slice(1))||/^[\s]*[=+@-]/.test(s.slice(1))))?s.slice(1):s;
 function readBackupCSV(input){
  const rows=parseCSV(input,1000000).map(row=>row.map(unescapeCSV));
  if(rows.shift().join('\0')!==BACKUP_COLUMNS.join('\0'))throw Error('Invalid CSV backup columns.');
@@ -215,15 +215,16 @@ function readBackupCSV(input){
 }
 function isBackupCSV(input){return input.replace(/^\ufeff/,'').startsWith('"'+BACKUP_COLUMNS[0]+'"')||input.replace(/^\ufeff/,'').startsWith(BACKUP_COLUMNS[0]+',');}
 // Each row uses named field columns. A deposit repeats when it has multiple receipts.
-const DEPOSIT_FIELDS=[['Deposit ID','id'],['Deposit type','type','type'],['Investment name','name'],["Owner's name",'ownerName'],['Ownership','ownership','ownership'],['Bank ID','bankId'],['Bank name','bankName'],['Deposit / certificate number','reference'],['Principal','principal','money'],['Annual interest rate %','rate','number'],['TDS %','tds','number'],['Payout cycle value','cycle','number'],['Payout cycle unit','cycleUnit'],['Opening date','start'],['First payout date','first'],['Maturity date','maturity'],['Tenure value','tenureCount','optional-number'],['Tenure unit','tenureUnit'],['Automatic renewal','autoRenew','boolean'],['Renewal stop date','renewalStop'],['Receiving bank account ID','bankAccountId'],['Interest type','interestType'],['Notes','notes']];
-const RECEIPT_FIELDS=[['Receipt ID','id'],['Received amount','amount','money'],['Received date','date'],['Receipt notes','notes'],['Receipt investment name','name'],['Receipt investment type','type','type'],['Scheduled payment date','scheduledDate'],['Payment kind','kind'],['Gross interest','gross','money'],['Tax deducted','tax','money'],['Expected net amount','expected','money'],['Principal returned','principal','money'],['Receipt receiving bank account ID','bankAccountId'],['Receipt receiving bank name','bankName'],['Receipt receiving account title','accountTitle'],['Receipt receiving account number','accountNumber']];
-const BANK_FIELDS=[['Bank account ID','id'],['Bank ID','bankId'],['Bank name','bankName'],['Account title','accountTitle'],['Account number','accountNumber'],['Branch name','branchName'],['Routing number','routingNumber'],['Account type','accountType'],['Note','note'],['Current balance','balance','money']];
+const DEPOSIT_FIELDS=[['Deposit ID','id'],['Deposit type','type','type'],['Investment name','name'],["Owner's name",'ownerName'],['Ownership','ownership','ownership'],['Bank ID','bankId'],['Bank name','bankName'],['Deposit / certificate number','reference','identifier'],['Principal','principal','money'],['Annual interest rate %','rate','number'],['TDS %','tds','number'],['Payout cycle value','cycle','number'],['Payout cycle unit','cycleUnit'],['Opening date','start'],['First payout date','first'],['Maturity date','maturity'],['Tenure value','tenureCount','optional-number'],['Tenure unit','tenureUnit'],['Automatic renewal','autoRenew','boolean'],['Renewal stop date','renewalStop'],['Receiving bank account ID','bankAccountId'],['Interest type','interestType'],['Notes','notes']];
+const RECEIPT_FIELDS=[['Receipt ID','id'],['Received amount','amount','money'],['Received date','date'],['Receipt notes','notes'],['Receipt investment name','name'],['Receipt investment type','type','type'],['Scheduled payment date','scheduledDate'],['Payment kind','kind'],['Gross interest','gross','money'],['Tax deducted','tax','money'],['Expected net amount','expected','money'],['Principal returned','principal','money'],['Receipt receiving bank account ID','bankAccountId'],['Receipt receiving bank name','bankName'],['Receipt receiving account title','accountTitle'],['Receipt receiving account number','accountNumber','identifier']];
+const BANK_FIELDS=[['Bank account ID','id'],['Bank ID','bankId'],['Bank name','bankName'],['Account title','accountTitle'],['Account number','accountNumber','identifier'],['Branch name','branchName'],['Routing number','routingNumber','identifier'],['Account type','accountType'],['Note','note'],['Current balance','balance','money']];
 const DEPOSIT_SETTINGS=['Currency','Number format','Dark mode','Deposit view','Reminder enabled','Reminder time','Deposit count','Receipt count','CSV backup version'];
 const BANK_SETTINGS=['Bank view','Bank account count','Currency','CSV backup version'];
 const DEPOSIT_COLUMNS=[...DEPOSIT_FIELDS.map(f=>f[0]),...RECEIPT_FIELDS.map(f=>f[0]),...DEPOSIT_SETTINGS];
 const BANK_COLUMNS=[...BANK_FIELDS.map(f=>f[0]),...BANK_SETTINGS];
-function encodeCSVField(value,type){
+function encodeCSVField(value,type,label){
  if(value===undefined)return '';
+ if(type==='identifier')return decodeCSVField(value,type,label);
  if(type==='money')return value/100;
  if(type==='boolean')return value?'Yes':'No';
  if(type==='type')return value==='NSC'?'National Savings Certificate':value;
@@ -232,6 +233,10 @@ function encodeCSVField(value,type){
 }
 function decodeCSVField(raw,type,label){
  if(raw==='')return undefined;
+ if(type==='identifier'){
+  if(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+$/.test(raw.trim()))throw Error(label+' is in scientific notation. Restore the original full digits, including leading zeros, from an unedited backup or bank record; shortened CSV values cannot be recovered.');
+  return raw;
+ }
  if(type==='money'){if(!/^\d+(?:\.\d{1,2})?$/.test(raw))throw Error('Invalid '+label+' in CSV.');const value=Math.round(Number(raw)*100);if(!Number.isSafeInteger(value))throw Error('Invalid '+label+' in CSV.');return value;}
  if(type==='number'||type==='optional-number'){if(!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(raw)||!Number.isFinite(Number(raw)))throw Error('Invalid '+label+' in CSV.');return Number(raw);}
  if(type==='boolean'){if(!['Yes','No'].includes(raw))throw Error(label+' must be Yes or No.');return raw==='Yes';}
@@ -239,7 +244,7 @@ function decodeCSVField(raw,type,label){
  if(type==='ownership'){if(!['Self','Others'].includes(raw))throw Error('Ownership must be Self or Others.');return raw.toLowerCase();}
  return raw;
 }
-function fieldValues(value,fields){return fields.map(([,key,type])=>encodeCSVField(value[key],type));}
+function fieldValues(value,fields){return fields.map(([label,key,type])=>encodeCSVField(value[key],type,label));}
 function readFields(get,fields){const value={};for(const [label,key,type] of fields){const field=decodeCSVField(get(label),type,label);if(field!==undefined)value[key]=field;}return value;}
 function checkedCSV(rows){
  if(rows[0].length>128)throw Error('Too many CSV columns.');
@@ -302,7 +307,7 @@ function readBankAccountsCSV(input){
 function csvKind(input){const header=parseCSV(input,1000000)[0].map(unescapeCSV).map(h=>h.trim().toLowerCase());return header.includes('deposit id')&&header.includes('csv backup version')?'deposits':header.includes('account number')&&header.includes('bank account id')&&header.includes('csv backup version')?'banks':isBackupCSV(input)?'backup-csv':'csv';}
 
 function readInstrumentCSV(input){
- const rows=parseCSV(input),unescape=s=>s.startsWith("''")||(s.startsWith("'")&&/^[\s]*[=+@-]/.test(s.slice(1)))?s.slice(1):s;
+ const rows=parseCSV(input),unescape=unescapeCSV;
  const header=rows.shift().map(unescape),normalized=header.map(h=>h.trim().toLowerCase());
  if(new Set(normalized).size!==normalized.length)throw Error('CSV has duplicate column names.');
  const required=['Instrument type','Investment name','Annual interest rate %','TDS %','Payout cycle','Opening date','Maturity date'];
@@ -328,7 +333,7 @@ function readInstrumentCSV(input){
   if(interestLabel&&compoundToken!==(interestLabel==='compound'))throw Error('Instrument type and interest type conflict in CSV row '+(index+2)+'. Use Compound FDR or Compound National Savings Certificate for compound interest.');
   if(compoundToken)type=type.replace(/^compound\s+/i,'');
   if(type.toUpperCase()==='FDR')type='FDR';else if(['nsc','national savings certificate','sanchaypatra'].includes(type.toLowerCase()))type='NSC';
-  let a={type,name:get('Investment name'),ownerName:get("Owner's name"),ownership,bankId:get('Bank ID'),bankName:get('Bank / institution'),reference:get('Certificate reference'),principal:Math.round(Number(amount)*100),rate:numeric(get('Annual interest rate %'),'annual interest rate'),tds:numeric(get('TDS %'),'TDS'),cycle,start,maturity,first,notes:get('Notes')};
+  let a={type,name:get('Investment name'),ownerName:get("Owner's name"),ownership,bankId:get('Bank ID'),bankName:get('Bank / institution'),reference:decodeCSVField(get('Certificate reference'),'identifier','Certificate reference')||'',principal:Math.round(Number(amount)*100),rate:numeric(get('Annual interest rate %'),'annual interest rate'),tds:numeric(get('TDS %'),'TDS'),cycle,start,maturity,first,notes:get('Notes')};
   if(compoundToken||interestLabel)a.interestType=compoundToken?'compound':'simple';
   if(bankAccountId)a.bankAccountId=bankAccountId;
   if(unit)a.cycleUnit=unit;
@@ -341,7 +346,7 @@ function readInstrumentCSV(input){
  });
  return migrate({version:VERSION,assets,paid:{},dark:false,currency:fileCurrency||'BDT'});
 }
-root.Transfer={FORMAT,VERSION,validDate,validAsset,validBankAccount,validBankAccountId,validBankAccountSnapshot,needsMigration,snapshot,migrate,exportData,merge,csv,INSTRUMENT_COLUMNS,instrumentCSV,readInstrumentCSV,BACKUP_COLUMNS,readBackupCSV,isBackupCSV,DEPOSIT_COLUMNS,BANK_COLUMNS,depositsCSV,bankAccountsCSV,readDepositsCSV,readBankAccountsCSV,csvKind};if(typeof module!=='undefined')module.exports=root.Transfer;
+root.Transfer={FORMAT,VERSION,validDate,validAsset,validBankAccount,validBankAccountId,validBankAccountSnapshot,needsMigration,snapshot,migrate,exportData,merge,csv,unescapeCSV,INSTRUMENT_COLUMNS,instrumentCSV,readInstrumentCSV,BACKUP_COLUMNS,readBackupCSV,isBackupCSV,DEPOSIT_COLUMNS,BANK_COLUMNS,depositsCSV,bankAccountsCSV,readDepositsCSV,readBankAccountsCSV,csvKind};if(typeof module!=='undefined')module.exports=root.Transfer;
 })(engineRoot);
 
 // These exports retain Android's integer-paisa arithmetic and interchange format.

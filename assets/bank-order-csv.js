@@ -34,7 +34,7 @@ export function readBankInformationCSV(content){
  for(const row of rows.slice(1)){
   const value=row[column].trim();if(!value)continue;
   if(!/^[1-9]\d*$/.test(value)||!Number.isSafeInteger(Number(value))||Number(value)>500)throw Error('Bank order must be a whole number from 1 to 500, or blank.');
-  const key=groupByAccount.get(row[idColumn]);if(!key)throw Error('Bank order needs a saved bank account.');
+  const key=groupByAccount.get(Transfer.unescapeCSV(row[idColumn]));if(!key)throw Error('Bank order needs a saved bank account.');
   const rank=Number(value);
   if(ranks.has(key)&&ranks.get(key)!==rank)throw Error('Accounts from the same bank must use the same Bank order number.');
   if(rankOwners.has(rank)&&rankOwners.get(rank)!==key)throw Error('Each bank must use a different Bank order number.');
@@ -50,5 +50,5 @@ export function exportBankInformationCSV(state){
  const rankByGroup=new Map(order.map((key,index)=>[key,index+1])),groupByAccount=new Map(groups.flatMap(group=>group.accounts.map(account=>[account.id,group.key])));
  const rows=csvRows(Transfer.bankAccountsCSV({...state,bankAccounts:groups.flatMap(group=>group.accounts)}));
  const idColumn=rows[0].findIndex(name=>name.toLowerCase()==='bank account id');
- return encodedCSV(rows.map((row,index)=>[...row,index===0?'Bank order':rankByGroup.get(groupByAccount.get(row[idColumn]))??'']));
+ return encodedCSV(rows.map((row,index)=>[...row,index===0?'Bank order':rankByGroup.get(groupByAccount.get(Transfer.unescapeCSV(row[idColumn])))??'']));
 }
