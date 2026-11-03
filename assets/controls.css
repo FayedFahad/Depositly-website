@@ -166,3 +166,6 @@ button:is(:disabled, [aria-disabled="true"]) { cursor: not-allowed; }
   :is(.btn, .icon-button, .modal-close):is(:hover, :active),
   .text-button:hover svg, .nav button:hover svg { transform: none !important; }
 }
+.android-download-link { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-bottom: 12px; padding: 10px 8px; color: var(--sidebar-text-bright); font-size: 12px; text-decoration: none; border-radius: 6px; }
+.android-download-link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.android-download-link:hover { background: var(--sidebar-card); }

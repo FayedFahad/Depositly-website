@@ -39,6 +39,11 @@ const server = createServer(async (request, response) => {
   try { requestUrl = new URL(request.url, 'http://localhost'); }
   catch { response.writeHead(400); response.end('Bad request'); return; }
   if (requestUrl.pathname.startsWith('/api/')) {
+    if (requestUrl.pathname === '/api/app-update') {
+      const handler = (await import('../api/app-update.js')).default;
+      await handler(request, response);
+      return;
+    }
     const route = /^\/api\/(auth|drive)\/([a-z-]+)\/?$/.exec(requestUrl.pathname);
     if (!route) { response.writeHead(404); response.end('Not found'); return; }
     try {
@@ -63,8 +68,8 @@ const server = createServer(async (request, response) => {
   try {
     let pathname = decodeURIComponent(requestUrl.pathname);
     if (pathname.endsWith('/')) pathname += 'index.html';
-    if (pathname === '/privacy' || pathname === '/terms') pathname += '/index.html';
-    const allowed = ['/index.html', '/config.js', '/favicon.ico', '/favicon.png', '/privacy/index.html', '/terms/index.html'].includes(pathname) || pathname.startsWith('/assets/');
+    if (['/privacy', '/terms', '/download'].includes(pathname)) pathname += '/index.html';
+    const allowed = ['/index.html', '/config.js', '/favicon.ico', '/favicon.png', '/privacy/index.html', '/terms/index.html', '/download/index.html'].includes(pathname) || pathname.startsWith('/assets/');
     if (!allowed || pathname.includes('\\') || pathname.includes('\0')) throw new Error('Not found');
     const target = await realpath(path.resolve(root, `.${pathname}`));
     const relative = path.relative(root, target);

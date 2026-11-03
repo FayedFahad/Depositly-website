@@ -1,5 +1,11 @@
 # Depositly web
 
+## Android download and app updates
+
+Open **Download Android app** in the sidebar or Settings, or visit `/download/`, to get the latest signed APK. Installing it over the existing Android app preserves its records. Android requires confirmation before installation and may ask to allow installs from the browser. Apps with the updater can check, download and install future releases from **Settings → App updates**.
+
+The public `/api/app-update` endpoint serves the validated release manifest from `FayedFahad/Depositly`'s `latest/update.json` release asset. Each successful signed app release refreshes this feed automatically; its APK URL points to an immutable versioned release. The API caches successful checks for one minute, uses a ten-second upstream timeout and returns a retryable unavailable response if the feed cannot be verified. It requires no Google sign-in, user data or GitHub credentials. Both Vercel and the local development server provide this endpoint.
+
 A responsive companion for Depositly Android: deposits, National Savings Certificates, payment schedules, receipts, ownership, and preferences. Google sign-in opens your personal tracker workspace and the same private Google Drive backups as the phone app. It does not create a bank account or a separate financial database.
 
 Payout Cycle and Tenure each support independent presets or Custom values, matching Android Build 15. Changing either selection does not change the other or enable automatic renewal.

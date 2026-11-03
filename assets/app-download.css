@@ -1,0 +1,22 @@
+.download-page { max-width: 1000px; padding-block: 40px 72px; }
+.download-heading { display: flex; align-items: center; gap: 24px; margin-block: 32px 36px; }
+.download-heading img { flex: 0 0 auto; }
+.download-heading h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.2; letter-spacing: -.03em; margin: 0 0 10px; }
+.download-heading p { color: var(--copy); margin: 0; max-width: 56ch; }
+.download-release { padding: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.download-release h2 { margin: 0 0 6px; font-size: 1.4rem; }
+.download-meta { color: var(--muted); margin: 0; font-variant-numeric: tabular-nums; }
+#download-status { margin-block: 18px; }
+.download-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 24px; }
+.download-primary, #download-retry { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 48px; padding: 12px 20px; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 700; text-decoration: none; border: 0; border-radius: 8px; cursor: pointer; }
+.download-primary:hover, #download-retry:hover { background: var(--primary-dark); }
+.download-primary svg { width: 20px; height: 20px; }
+.download-information { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 40px; }
+.download-information h2 { font-size: 1.2rem; margin: 0 0 16px; }
+.download-information p, .download-information ol { color: var(--copy); font-size: .95rem; max-width: 68ch; }
+.download-information ol { padding-left: 23px; }
+.download-information li { padding-left: 3px; margin-bottom: 12px; }
+.download-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
+#download-retry:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: 3px; }
+@media(max-width: 640px) { .download-page { padding-block: 28px 48px; } .download-heading { gap: 16px; align-items: flex-start; } .download-heading img { width: 48px; height: 48px; } .download-release { padding: 22px; } .download-information { grid-template-columns: 1fr; gap: 24px; } }

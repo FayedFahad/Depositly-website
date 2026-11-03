@@ -14,7 +14,7 @@ async function collect(directory) {
     else if (entry.isFile() && (!['api', 'server'].includes(directory.split('/')[0]) || /\.(?:mjs|js)$/.test(entry.name))) files.push(name);
   }
 }
-for (const directory of ['assets', 'privacy', 'terms', 'api', 'server']) await collect(directory);
+for (const directory of ['assets', 'privacy', 'terms', 'download', 'api', 'server']) await collect(directory);
 for (const file of ['build.mjs', 'serve.mjs', 'package.mjs', 'extract-bank-assets.mjs', 'observability.mjs']) files.push(`scripts/${file}`);
 
 function crc32(buffer) {
