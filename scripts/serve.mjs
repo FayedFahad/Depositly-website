@@ -29,6 +29,7 @@ try {
 const port = Number(process.env.PORT || 4173);
 const observability=(await build({...observabilityBuildOptions,write:false})).outputFiles[0].contents;
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.txt': 'text/plain; charset=utf-8' };
+types['.apk'] = 'application/vnd.android.package-archive';
 
 const server = createServer(async (request, response) => {
   response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -69,12 +70,16 @@ const server = createServer(async (request, response) => {
     let pathname = decodeURIComponent(requestUrl.pathname);
     if (pathname.endsWith('/')) pathname += 'index.html';
     if (['/privacy', '/terms', '/download'].includes(pathname)) pathname += '/index.html';
-    const allowed = ['/index.html', '/config.js', '/favicon.ico', '/favicon.png', '/privacy/index.html', '/terms/index.html', '/download/index.html'].includes(pathname) || pathname.startsWith('/assets/');
+    const versionedRelease = /^\/releases\/(\d+\.\d+(?:\.\d+)?-build-[1-9]\d*)\/(?:Depositly-\1\.apk|build-info\.json|update\.json)$/.test(pathname);
+    const release = pathname === '/releases/latest.json' || versionedRelease;
+    const allowed = ['/index.html', '/config.js', '/favicon.ico', '/favicon.png', '/privacy/index.html', '/terms/index.html', '/download/index.html'].includes(pathname) || pathname.startsWith('/assets/') || release;
     if (!allowed || pathname.includes('\\') || pathname.includes('\0')) throw new Error('Not found');
     const target = await realpath(path.resolve(root, `.${pathname}`));
     const relative = path.relative(root, target);
     if (relative.startsWith('..') || path.isAbsolute(relative) || !(await stat(target)).isFile()) throw new Error('Not found');
     const body = await readFile(target);
+    if (release) response.setHeader('Cache-Control', versionedRelease ? 'public, max-age=31536000, immutable' : 'no-cache, max-age=0, must-revalidate');
+    if (path.extname(target) === '.apk') response.setHeader('Content-Disposition', 'attachment');
     response.writeHead(200, { 'Content-Type': types[path.extname(target)] || 'application/octet-stream', 'Content-Length': body.length });
     response.end(request.method === 'HEAD' ? undefined : body);
   } catch {

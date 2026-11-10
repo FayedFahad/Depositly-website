@@ -1,10 +1,12 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import {validateReleaseDirectory} from './validate-releases.mjs';
 
 // A dependency-free ZIP writer. Explicit deployment inputs exclude local secrets.
 const root = fileURLToPath(new URL('../', import.meta.url));
 const files = ['index.html', 'config.js', 'vercel.json', 'README.md', 'package.json', 'package-lock.json', '.env.example', '.gitignore', '.vercelignore'];
+files.push(...(await validateReleaseDirectory()).files);
 async function collect(directory) {
   for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
     // Symlinks, actual environment files, temporary files and dotfiles are excluded.
@@ -15,7 +17,7 @@ async function collect(directory) {
   }
 }
 for (const directory of ['assets', 'privacy', 'terms', 'download', 'api', 'server']) await collect(directory);
-for (const file of ['build.mjs', 'serve.mjs', 'package.mjs', 'extract-bank-assets.mjs', 'observability.mjs']) files.push(`scripts/${file}`);
+for (const file of ['build.mjs', 'serve.mjs', 'package.mjs', 'extract-bank-assets.mjs', 'observability.mjs', 'validate-releases.mjs']) files.push(`scripts/${file}`);
 
 function crc32(buffer) {
   let crc = 0xffffffff;

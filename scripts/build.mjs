@@ -3,8 +3,10 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {build} from 'esbuild';
 import {observabilityBuildOptions} from './observability.mjs';
+import {validateReleaseDirectory} from './validate-releases.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const release = await validateReleaseDirectory();
 const output = path.resolve(root, 'public');
 // This generated directory is the only recursive-delete target in this script.
 if (path.relative(root, output) !== 'public' || !path.isAbsolute(output)) throw new Error('Invalid static output directory.');
@@ -32,6 +34,7 @@ async function copyPublic(relative) {
 }
 // Never copy the repository root: server code and environment files stay private.
 for (const relative of ['index.html', 'config.js', 'favicon.ico', 'favicon.png', 'assets', 'privacy', 'terms', 'download']) await copyPublic(relative);
+for (const relative of release.files) await copyPublic(relative);
 await build({...observabilityBuildOptions,outfile:path.join(output,'assets','observability.js')});
 await mkdir(path.join(output,'assets','licenses'),{recursive:true});
 for(const name of ['analytics','speed-insights']){

@@ -17,7 +17,7 @@ export function createDownloadPage({document, fetchImpl = fetch}) {
       const version = /^(\d+\.\d+(?:\.\d+)?) Build ([1-9]\d*)$/.exec(release.versionName);
       if (!version || release.package !== 'app.depositly.mobile' || !Number.isSafeInteger(release.apkSize) || release.apkSize < 1) throw Error();
       const slug = `${version[1]}-build-${version[2]}`;
-      if (release.apkUrl !== `https://github.com/FayedFahad/Depositly/releases/download/v${slug}/Depositly-${slug}.apk` || typeof release.releaseNotes !== 'string') throw Error();
+      if (release.apkUrl !== `https://depositly.vercel.app/releases/${slug}/Depositly-${slug}.apk` || typeof release.releaseNotes !== 'string') throw Error();
       document.getElementById('release-version').textContent = release.versionName;
       document.getElementById('release-size').textContent = `${(release.apkSize / 1024 / 1024).toFixed(1)} MB · Android 8.0 or later`;
       document.getElementById('release-notes').textContent = release.releaseNotes || 'The latest signed Depositly release.';
