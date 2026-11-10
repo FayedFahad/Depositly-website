@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "package": "app.depositly.mobile",
-  "versionName": "1.3.1 Build 7",
-  "versionCode": 237,
-  "apkUrl": "https://depositly.vercel.app/releases/1.3.1-build-7/Depositly-1.3.1-build-7.apk",
-  "apkSha256": "a7c40cfbf079a65f462be2d8a9d066aca06286f161a939a39895adccef3bbca0",
+  "versionName": "1.3.1 Build 8",
+  "versionCode": 262,
+  "apkUrl": "https://depositly.vercel.app/releases/1.3.1-build-8/Depositly-1.3.1-build-8.apk",
+  "apkSha256": "e5b29ff04f07e01179beba7d5d18bacc0ec35783a66ba5e99ee7f4d6e2142b2a",
   "certificateSha256": "655445e0b1a199ef9ae90efa6e795d0800d36ef0ca725f5f87835d396796224d",
   "apkSize": 3155004,
-  "releaseNotes": "Depositly 1.3.1 Build 7\r\n\r\n- Added Settings → App updates to check for new releases, download with progress and cancellation, and open Android's installer. The first installation permission is handled through Android settings; existing app records are retained when updating.\r\n- Downloads verify their checksum, package, version and original signing certificate before installation. Pending verified downloads can be reopened from Settings.\r\n- Added a shared public release feed and versioned APK releases. Successful main-branch app releases appear automatically in the Settings updater and the website's Android download page.\r\n- Download the latest signed app from https://depositly.vercel.app/download/. Install this release once to enable future updates from inside the app.",
-  "publishedAt": "2026-11-03T12:42:34Z"
+  "releaseNotes": "Depositly 1.3.1 Build 8\r\n\r\n- Moved APK downloads to versioned files on depositly.vercel.app. Settings and the website now read the same deployed update information without requiring GitHub access.\r\n- Successful app release jobs automatically publish the signed APK and metadata into the website repository. Vercel deploys them together; previous versioned downloads remain available.\r\n- Kept SHA-256, package, version and signing certificate checks. The app accepts APK downloads only from the official HTTPS website, including redirects.\r\n- Install this release once from https://depositly.vercel.app/download/ if you use Build 7 or earlier. Future updates can be downloaded from Settings → App updates. Your saved records remain available when installing over the existing app.",
+  "publishedAt": "2026-11-10T19:08:00Z"
 }

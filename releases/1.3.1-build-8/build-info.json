@@ -1,0 +1,8 @@
+{
+  "package": "app.depositly.mobile",
+  "versionName": "1.3.1 Build 8",
+  "versionCode": 262,
+  "commit": "90760f4aaf720e14ccd5497f3f54eb2a9fdf924e",
+  "apkSha256": "e5b29ff04f07e01179beba7d5d18bacc0ec35783a66ba5e99ee7f4d6e2142b2a",
+  "certificateSha256": "655445e0b1a199ef9ae90efa6e795d0800d36ef0ca725f5f87835d396796224d"
+}
